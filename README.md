@@ -5,12 +5,14 @@ Static client-side lookup page for EC-number reaction templates from:
 `/home/n-z/xliu254/ezspecificity/analysis/2026-07-19-aries-db-build-methods/results/ec_number_reaction_template_rows.csv`
 
 Generated data contains 2,464 EC buckets and 6,333 deduplicated EC/template SMARTS entries from 18,171 source rows.
+Each template includes model-ready examples from `analysis/2026-07-16-clean-brenda-hal-model1-split/data/all_model_ready_examples.csv`; the page shows one example by default and expands the rest on demand.
 
 ## Data Sources
 
 - Full EC recommended names: https://ftp.expasy.org/databases/enzyme/enzyme.dat
 - EC class/subclass labels: https://enzyme.expasy.org/enzyme-byclass.html
 - Browser rendering: vendored RDKit.js assets from `@rdkit/rdkit@2025.3.4-1.0.0`.
+- Example sequence/source metadata: `analysis/2026-07-16-clean-brenda-hal-model1-split/data/all_model_ready_examples.csv`
 
 ## Rebuild
 

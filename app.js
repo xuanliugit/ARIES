@@ -355,6 +355,8 @@ function templateCard(template, index) {
     .map(([name, count]) => `${name}: ${count}`)
     .join(", ");
   const showRadius = template.radius0Smarts !== template.siteSmarts;
+  const examples = template.examples || [];
+  const fullReactionCount = examples.filter((example) => example.fullReactionSmiles).length;
 
   card.innerHTML = `
     <div class="template-header">
@@ -367,6 +369,8 @@ function templateCard(template, index) {
       </div>
       <div class="badge-row">
         <span class="badge">${template.rowCount.toLocaleString()} rows</span>
+        <span class="badge">${examples.length.toLocaleString()} examples</span>
+        <span class="badge">${fullReactionCount.toLocaleString()} full reactions</span>
         <span class="badge">${escapeHtml(datasetText || "dataset")}</span>
         ${template.selectivityIssueCount ? `<span class="badge warn">${template.selectivityIssueCount.toLocaleString()} selectivity issue rows</span>` : ""}
       </div>
@@ -382,16 +386,110 @@ function templateCard(template, index) {
         <span>legal atoms: ${formatMaybe(template.legalAtomCount)}</span>
         <span>examples: ${escapeHtml(template.exampleIds.join(", ") || "none")}</span>
       </div>
+      ${examplesSection(template)}
     </div>
   `;
 
-  for (const button of card.querySelectorAll("[data-copy]")) {
-    button.addEventListener("click", (event) => {
-      copyText(event.currentTarget.dataset.copy, event.currentTarget);
+  attachCopyHandlers(card);
+  const showMore = card.querySelector(".show-more-examples");
+  if (showMore) {
+    showMore.addEventListener("click", () => {
+      const list = card.querySelector(".examples-list");
+      const hiddenExamples = examples.slice(1);
+      hiddenExamples.forEach((example, hiddenIndex) => {
+        list.insertAdjacentHTML("beforeend", exampleCard(example, hiddenIndex + 2));
+      });
+      attachCopyHandlers(list);
+      showMore.remove();
+      renderVisibleDrawings();
     });
   }
 
   return card;
+}
+
+function attachCopyHandlers(root) {
+  for (const button of root.querySelectorAll("[data-copy]")) {
+    if (button.dataset.copyBound === "1") {
+      continue;
+    }
+    button.dataset.copyBound = "1";
+    button.addEventListener("click", (event) => {
+      copyText(event.currentTarget.dataset.copy, event.currentTarget);
+    });
+  }
+}
+
+function examplesSection(template) {
+  const examples = template.examples || [];
+  if (!examples.length) {
+    return `
+      <section class="examples-block">
+        <div class="examples-head">
+          <span>Examples</span>
+        </div>
+        <div class="empty">No model-ready example metadata available for this template.</div>
+      </section>
+    `;
+  }
+  const remaining = examples.length - 1;
+  return `
+    <section class="examples-block">
+      <div class="examples-head">
+        <span>Examples</span>
+        <span>${examples.length.toLocaleString()} source examples</span>
+      </div>
+      <div class="examples-list">
+        ${exampleCard(examples[0], 1)}
+      </div>
+      ${
+        remaining > 0
+          ? `<button type="button" class="show-more-examples">Show ${remaining.toLocaleString()} more example${remaining === 1 ? "" : "s"}</button>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function exampleCard(example, index) {
+  const reaction = example.fullReactionSmiles || "";
+  return `
+    <article class="example-card">
+      <div class="example-topline">
+        <strong>Example ${index}</strong>
+        <span class="badge">${escapeHtml(example.dataset || "source")}</span>
+        <span class="badge">${escapeHtml(example.id)}</span>
+      </div>
+      <div class="example-protein">
+        <span class="example-label">Protein name</span>
+        <span>${escapeHtml(example.proteinName || "Unknown protein")}</span>
+      </div>
+      <div class="example-grid">
+        <div class="sequence-block">
+          <div class="smarts-head">
+            <span>Protein sequence</span>
+            <button type="button" data-copy="${escapeAttribute(example.proteinSequence || "")}">Copy</button>
+          </div>
+          <pre><code>${escapeHtml(example.proteinSequence || "No sequence available")}</code></pre>
+        </div>
+        <div class="example-facts">
+          <span>source pair: ${escapeHtml((example.sourcePairIds || []).join(", ") || "n/a")}</span>
+          <span>reaction: ${escapeHtml((example.sourceReactionIds || []).join(", ") || "n/a")}</span>
+          <span>enzyme: ${escapeHtml((example.sourceEnzymeIds || []).join(", ") || "n/a")}</span>
+        </div>
+      </div>
+      ${
+        reaction
+          ? `
+            <div class="reaction-art full-reaction-art" data-reaction="${escapeAttribute(reaction)}">RDKit.js loading</div>
+            ${smartsBlock("Full mapped reaction SMILES", reaction)}
+          `
+          : `
+            <div class="empty">Full mapped reaction was not available in the recovered source rows for this example.</div>
+          `
+      }
+    </article>
+  `;
 }
 
 function smartsBlock(label, value) {
@@ -415,11 +513,18 @@ function renderVisibleDrawings() {
       continue;
     }
     target.dataset.rendered = "1";
-    renderReactionSmarts(target.dataset.smarts, target);
+    renderReactionSmarts(target.dataset.smarts, target, "query");
+  }
+  for (const target of document.querySelectorAll(".reaction-art[data-reaction]")) {
+    if (target.dataset.rendered === "1") {
+      continue;
+    }
+    target.dataset.rendered = "1";
+    renderReactionSmarts(target.dataset.reaction, target, "smiles");
   }
 }
 
-function renderReactionSmarts(smarts, target) {
+function renderReactionSmarts(smarts, target, mode = "query") {
   target.textContent = "";
   const parsed = parseReactionSmarts(smarts);
   if (!parsed) {
@@ -429,18 +534,18 @@ function renderReactionSmarts(smarts, target) {
 
   const row = document.createElement("div");
   row.className = "reaction-row";
-  addMoleculeSide(row, parsed.reactants);
+  addMoleculeSide(row, parsed.reactants, mode);
   addOperator(row, "->");
-  addMoleculeSide(row, parsed.products);
+  addMoleculeSide(row, parsed.products, mode);
   target.appendChild(row);
 }
 
-function addMoleculeSide(row, parts) {
+function addMoleculeSide(row, parts, mode) {
   parts.forEach((part, index) => {
     if (index > 0) {
       addOperator(row, "+");
     }
-    row.appendChild(renderMolecule(part));
+    row.appendChild(renderMolecule(part, mode));
   });
 }
 
@@ -451,12 +556,15 @@ function addOperator(row, text) {
   row.appendChild(span);
 }
 
-function renderMolecule(smarts) {
+function renderMolecule(smarts, mode = "query") {
   const cell = document.createElement("div");
   cell.className = "mol-cell";
   let mol = null;
   try {
-    mol = window.RDKit.get_qmol(smarts) || window.RDKit.get_mol(smarts);
+    mol =
+      mode === "smiles"
+        ? window.RDKit.get_mol(smarts) || window.RDKit.get_qmol(smarts)
+        : window.RDKit.get_qmol(smarts) || window.RDKit.get_mol(smarts);
     if (mol) {
       cell.innerHTML = mol.get_svg(230, 160);
       mol.delete();
@@ -475,14 +583,21 @@ function renderMolecule(smarts) {
 }
 
 function parseReactionSmarts(smarts) {
-  const parts = smarts.split(">>");
-  if (parts.length !== 2) {
-    return null;
+  let parts = smarts.split(">>");
+  if (parts.length === 2) {
+    return {
+      reactants: splitSide(parts[0]),
+      products: splitSide(parts[1]),
+    };
   }
-  return {
-    reactants: splitSide(parts[0]),
-    products: splitSide(parts[1]),
-  };
+  parts = smarts.split(">");
+  if (parts.length === 3) {
+    return {
+      reactants: splitSide(parts[0]),
+      products: splitSide(parts[2]),
+    };
+  }
+  return null;
 }
 
 function splitSide(side) {
