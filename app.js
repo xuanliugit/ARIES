@@ -43,7 +43,7 @@ function init() {
     els[id] = document.getElementById(id);
   }
 
-  els.datasetMeta.textContent = `${DATA.metadata.uniqueEcCount.toLocaleString()} EC buckets, ${DATA.metadata.uniqueTemplateCount.toLocaleString()} templates, ${DATA.metadata.sourceCsvRows.toLocaleString()} source rows`;
+  els.datasetMeta.textContent = `Supported by ARIES DB: ${DATA.metadata.uniqueEcCount.toLocaleString()} EC buckets, ${DATA.metadata.uniqueTemplateCount.toLocaleString()} templates, ${DATA.metadata.sourceCsvRows.toLocaleString()} source rows`;
 
   els.searchInput.addEventListener("input", () => {
     state.query = els.searchInput.value.trim();

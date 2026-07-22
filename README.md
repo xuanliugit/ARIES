@@ -1,4 +1,4 @@
-# EC Reaction Template Lookup
+# ARIES Lookup: Connect enzyme function to executable biochemical transformation
 
 Static client-side lookup page for EC-number reaction templates from:
 
