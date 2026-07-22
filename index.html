@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EC Reaction Template Lookup</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="vendor/RDKit_minimal.js"></script>
+    <script>
+      window.rdkitReady = window.initRDKitModule
+        ? window
+            .initRDKitModule({
+              locateFile: function (file) {
+                return "vendor/" + file;
+              },
+            })
+            .then(function (RDKit) {
+              window.RDKit = RDKit;
+              return RDKit;
+            })
+        : Promise.reject(new Error("RDKit.js loader unavailable"));
+    </script>
+    <script src="data/ec_templates.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>EC Reaction Template Lookup</h1>
+        <div class="meta-line" id="datasetMeta"></div>
+      </div>
+      <div class="rdkit-status" id="rdkitStatus">RDKit.js loading</div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <label class="search-label" for="searchInput">Search</label>
+        <div class="search-row">
+          <input
+            id="searchInput"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="EC number, enzyme name, or SMARTS"
+          />
+          <button id="clearSearch" type="button" title="Clear search">Clear</button>
+        </div>
+
+        <div class="browse-head">
+          <h2>Browse EC</h2>
+          <button id="resetBrowse" type="button" title="Go to top level">Top</button>
+        </div>
+        <nav class="breadcrumbs" id="breadcrumbs" aria-label="EC breadcrumb"></nav>
+        <div class="browse-list" id="browseList"></div>
+      </aside>
+
+      <section class="content">
+        <div class="panel-head" id="panelHead"></div>
+        <div class="result-summary" id="resultSummary"></div>
+        <div class="ec-results" id="ecResults"></div>
+        <div class="template-list" id="templateList"></div>
+        <div class="load-row">
+          <button id="loadMore" type="button">Show more</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Expasy names: ENZYME database and class browser.</span>
+      <span>Rendering: RDKit.js.</span>
+    </footer>
+  </body>
+</html>
