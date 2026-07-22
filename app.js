@@ -461,6 +461,7 @@ function exampleCard(example, index) {
   const reaction = example.fullReactionSmiles || "";
   const substrate = example.canonicalSubstrateSmiles || example.mappedSubstrateSmiles || "";
   const mappedSubstrate = example.mappedSubstrateSmiles || "";
+  const hasDistinctMappedSubstrate = mappedSubstrate && mappedSubstrate !== substrate;
   return `
     <article class="example-card">
       <div class="example-topline">
@@ -489,8 +490,8 @@ function exampleCard(example, index) {
         </div>
       </div>
       <div class="example-substrate-grid">
-        ${compactValueBlock("Canonical substrate SMILES", substrate)}
-        ${compactValueBlock("Mapped substrate SMILES", mappedSubstrate)}
+        ${compactValueBlock("Substrate SMILES", substrate)}
+        ${hasDistinctMappedSubstrate ? compactValueBlock("Mapped substrate SMILES", mappedSubstrate) : ""}
       </div>
       ${
         reaction

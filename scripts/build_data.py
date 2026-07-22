@@ -253,6 +253,11 @@ def load_reference_examples(path: Path, reaction_map: dict[tuple[str, str, str, 
                 if full_reaction:
                     break
 
+            canonical_substrate = row.get("canonical_substrate_smiles", "")
+            mapped_substrate = row.get("mapped_substrate_smiles", "")
+            if mapped_substrate == canonical_substrate:
+                mapped_substrate = ""
+
             examples[example_id] = {
                 "id": example_id,
                 "proteinName": protein_label(dataset, enzyme_ids, uniprots),
@@ -261,8 +266,8 @@ def load_reference_examples(path: Path, reaction_map: dict[tuple[str, str, str, 
                 "sourcePairIds": pair_ids,
                 "sourceReactionIds": reaction_ids,
                 "sourceEnzymeIds": enzyme_ids,
-                "mappedSubstrateSmiles": row.get("mapped_substrate_smiles", ""),
-                "canonicalSubstrateSmiles": row.get("canonical_substrate_smiles", ""),
+                "mappedSubstrateSmiles": mapped_substrate,
+                "canonicalSubstrateSmiles": canonical_substrate,
                 "fullReactionSmiles": full_reaction,
             }
     return examples
