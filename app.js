@@ -39,6 +39,7 @@ function init() {
     "ecResults",
     "templateList",
     "loadMore",
+    "backToTop",
   ]) {
     els[id] = document.getElementById(id);
   }
@@ -66,6 +67,10 @@ function init() {
     state.templateLimit += TEMPLATE_LIMIT_STEP;
     renderMainPanel();
   });
+  els.backToTop.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  window.addEventListener("scroll", updateBackToTop);
 
   const hashEc = new URLSearchParams(window.location.hash.slice(1)).get("ec");
   if (hashEc && ecByCode.has(hashEc)) {
@@ -84,6 +89,7 @@ function init() {
     });
 
   render();
+  updateBackToTop();
 }
 
 function render() {
@@ -380,11 +386,11 @@ function templateCard(template, index) {
       ${smartsBlock("Reaction SMARTS", template.siteSmarts)}
       ${showRadius ? smartsBlock("Radius-0 SMARTS", template.radius0Smarts) : ""}
       <div class="detail-grid">
-        <span>legal sites: ${formatMaybe(template.legalSiteCount)}</span>
-        <span>atoms: ${formatMaybe(template.numAtoms)}</span>
-        <span>positive atoms: ${formatMaybe(template.positiveAtomCount)}</span>
-        <span>legal atoms: ${formatMaybe(template.legalAtomCount)}</span>
-        <span>examples: ${escapeHtml(template.exampleIds.join(", ") || "none")}</span>
+        <span><strong>Legal sites</strong> ${formatMaybe(template.legalSiteCount)}</span>
+        <span><strong>Atoms</strong> ${formatMaybe(template.numAtoms)}</span>
+        <span><strong>Positive atoms</strong> ${formatMaybe(template.positiveAtomCount)}</span>
+        <span><strong>Legal atoms</strong> ${formatMaybe(template.legalAtomCount)}</span>
+        <span><strong>Example IDs</strong> ${escapeHtml(template.exampleIds.join(", ") || "none")}</span>
       </div>
       ${examplesSection(template)}
     </div>
@@ -453,6 +459,8 @@ function examplesSection(template) {
 
 function exampleCard(example, index) {
   const reaction = example.fullReactionSmiles || "";
+  const substrate = example.canonicalSubstrateSmiles || example.mappedSubstrateSmiles || "";
+  const mappedSubstrate = example.mappedSubstrateSmiles || "";
   return `
     <article class="example-card">
       <div class="example-topline">
@@ -476,7 +484,13 @@ function exampleCard(example, index) {
           <span>source pair: ${escapeHtml((example.sourcePairIds || []).join(", ") || "n/a")}</span>
           <span>reaction: ${escapeHtml((example.sourceReactionIds || []).join(", ") || "n/a")}</span>
           <span>enzyme: ${escapeHtml((example.sourceEnzymeIds || []).join(", ") || "n/a")}</span>
+          <span>sequence length: ${formatMaybe((example.proteinSequence || "").length || null)}</span>
+          <span>full reaction: ${reaction ? "available" : "not recovered"}</span>
         </div>
+      </div>
+      <div class="example-substrate-grid">
+        ${compactValueBlock("Canonical substrate SMILES", substrate)}
+        ${compactValueBlock("Mapped substrate SMILES", mappedSubstrate)}
       </div>
       ${
         reaction
@@ -489,6 +503,21 @@ function exampleCard(example, index) {
           `
       }
     </article>
+  `;
+}
+
+function compactValueBlock(label, value) {
+  if (!value) {
+    return "";
+  }
+  return `
+    <div class="compact-value">
+      <div class="smarts-head">
+        <span>${escapeHtml(label)}</span>
+        <button type="button" data-copy="${escapeAttribute(value)}">Copy</button>
+      </div>
+      <pre><code>${escapeHtml(value)}</code></pre>
+    </div>
   `;
 }
 
@@ -752,6 +781,13 @@ function fallbackCopy(text) {
   textarea.select();
   document.execCommand("copy");
   textarea.remove();
+}
+
+function updateBackToTop() {
+  if (!els.backToTop) {
+    return;
+  }
+  els.backToTop.classList.toggle("visible", window.scrollY > 480);
 }
 
 function escapeHtml(value) {

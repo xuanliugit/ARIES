@@ -427,6 +427,16 @@ input[type="search"]:focus {
   background: var(--panel);
   box-shadow: var(--shadow);
   overflow: hidden;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.template-card:hover {
+  border-color: rgba(15, 118, 110, 0.42);
+  box-shadow: 0 18px 42px rgba(21, 38, 35, 0.14);
+  transform: translateY(-2px);
 }
 
 .template-header {
@@ -530,20 +540,21 @@ pre {
 }
 
 .detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   color: var(--muted);
   font-size: 12px;
 }
 
 .detail-grid span {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 7px 8px;
-  background: var(--panel-soft);
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.detail-grid strong {
+  color: var(--text);
+  font-weight: 850;
 }
 
 .examples-block {
@@ -631,15 +642,68 @@ pre {
 }
 
 .example-facts span {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel-soft);
-  padding: 7px 8px;
   overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.example-facts span::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  vertical-align: 1px;
+}
+
+.example-substrate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.compact-value {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.compact-value pre {
+  max-height: 96px;
+  overflow: auto;
 }
 
 .show-more-examples {
   justify-self: start;
+}
+
+.back-to-top {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 20;
+  min-width: 54px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 14px 32px rgba(15, 118, 110, 0.24);
+}
+
+.back-to-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  background: var(--accent-strong);
+  color: #ffffff;
 }
 
 .load-row {
