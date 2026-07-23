@@ -308,6 +308,10 @@ def load_reference_examples(path: Path, reaction_map: dict[tuple[str, str, str, 
                 "sourcePairIds": pair_ids,
                 "sourceReactionIds": reaction_ids,
                 "sourceEnzymeIds": enzyme_ids,
+                "legalSiteCount": first_int([row.get("legal_site_count", "")]),
+                "numAtoms": first_int([row.get("num_atoms", "")]),
+                "positiveAtomCount": first_int([row.get("positive_atom_count", "")]),
+                "legalAtomCount": first_int([row.get("legal_atom_count", "")]),
                 "mappedSubstrateSmiles": mapped_substrate,
                 "canonicalSubstrateSmiles": canonical_substrate,
                 "fullReactionSmiles": full_reaction,
@@ -366,10 +370,6 @@ def build_dataset(csv_path: Path, full_names: dict[str, str], class_names: dict[
                 "examples": [],
                 "selectivityIssueCount": 0,
                 "rowCount": 0,
-                "legalSiteCounts": [],
-                "numAtoms": [],
-                "positiveAtomCounts": [],
-                "legalAtomCounts": [],
             },
         )
         entry["rowCount"] += 1
@@ -388,21 +388,10 @@ def build_dataset(csv_path: Path, full_names: dict[str, str], class_names: dict[
         example = example_details.get(row["example_id"])
         if example and all(existing["id"] != example["id"] for existing in entry["examples"]):
             entry["examples"].append(example)
-        for field, target in [
-            ("legal_site_count", "legalSiteCounts"),
-            ("num_atoms", "numAtoms"),
-            ("positive_atom_count", "positiveAtomCounts"),
-            ("legal_atom_count", "legalAtomCounts"),
-        ]:
-            entry[target].append(row[field])
 
     templates = []
     for entry in grouped.values():
         entry["sourceDatasets"] = dict(sorted(entry["sourceDatasets"].items()))
-        entry["legalSiteCount"] = first_int(entry.pop("legalSiteCounts"))
-        entry["numAtoms"] = first_int(entry.pop("numAtoms"))
-        entry["positiveAtomCount"] = first_int(entry.pop("positiveAtomCounts"))
-        entry["legalAtomCount"] = first_int(entry.pop("legalAtomCounts"))
         entry["examples"].sort(key=lambda example: (0 if example.get("fullReactionSmiles") else 1, example["id"]))
         templates.append(entry)
 

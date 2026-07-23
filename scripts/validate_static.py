@@ -36,6 +36,16 @@ def main() -> None:
         for item in data["templates"]
         for example in item["examples"]
     )
+    assert all(
+        key not in item
+        for item in data["templates"]
+        for key in ["legalSiteCount", "numAtoms", "positiveAtomCount", "legalAtomCount"]
+    )
+    assert all(
+        all(key in example for key in ["legalSiteCount", "numAtoms", "positiveAtomCount", "legalAtomCount"])
+        for item in data["templates"]
+        for example in item["examples"]
+    )
 
     for path in [
         "index.html",

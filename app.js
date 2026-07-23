@@ -385,13 +385,6 @@ function templateCard(template, index) {
       <div class="reaction-art" data-smarts="${escapeAttribute(template.siteSmarts)}">RDKit.js loading</div>
       ${smartsBlock("Reaction SMARTS", template.siteSmarts)}
       ${showRadius ? smartsBlock("Radius-0 SMARTS", template.radius0Smarts) : ""}
-      <div class="detail-grid">
-        <span><strong>Legal sites</strong> ${formatMaybe(template.legalSiteCount)}</span>
-        <span><strong>Atoms</strong> ${formatMaybe(template.numAtoms)}</span>
-        <span><strong>Positive atoms</strong> ${formatMaybe(template.positiveAtomCount)}</span>
-        <span><strong>Legal atoms</strong> ${formatMaybe(template.legalAtomCount)}</span>
-        <span><strong>Example IDs</strong> ${escapeHtml(template.exampleIds.join(", ") || "none")}</span>
-      </div>
       ${examplesSection(template)}
     </div>
   `;
@@ -486,6 +479,10 @@ function exampleCard(example, index) {
           <span>source pair: ${escapeHtml((example.sourcePairIds || []).join(", ") || "n/a")}</span>
           <span>reaction: ${escapeHtml((example.sourceReactionIds || []).join(", ") || "n/a")}</span>
           <span>enzyme: ${escapeHtml((example.sourceEnzymeIds || []).join(", ") || "n/a")}</span>
+          <span>legal sites: ${formatMaybe(example.legalSiteCount)}</span>
+          <span>atoms: ${formatMaybe(example.numAtoms)}</span>
+          <span>positive atoms: ${formatMaybe(example.positiveAtomCount)}</span>
+          <span>legal atoms: ${formatMaybe(example.legalAtomCount)}</span>
           <span>sequence length: ${formatMaybe((example.proteinSequence || "").length || null)}</span>
           <span>full reaction: ${reaction ? "available" : "not recovered"}</span>
         </div>
