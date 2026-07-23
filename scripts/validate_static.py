@@ -46,6 +46,14 @@ def main() -> None:
         for item in data["templates"]
         for example in item["examples"]
     )
+    examples_by_id = {
+        example["id"]: example
+        for item in data["templates"]
+        for example in item["examples"]
+    }
+    assert examples_by_id["clean-model1-f183eb4af5552ddc72fd"]["sourceEnzymeIds"] == ["0"]
+    assert examples_by_id["clean-model1-f183eb4af5552ddc72fd"]["fullReactionSmiles"]
+    assert examples_by_id["clean-model1-5ff925128296cd4c9bdf"]["fullReactionSmiles"]
 
     for path in [
         "index.html",

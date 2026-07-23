@@ -8,6 +8,7 @@ import csv
 import html
 import json
 import re
+import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,6 +53,15 @@ REACTION_SOURCE_CSVS = [
         / "mixed_brenda_halogenase_corrected_fold0_20260703"
         / "aries_examples.csv",
     ),
+    (
+        "brenda_reacting_atom_audit",
+        Path(__file__).resolve().parents[2]
+        / "ezspecificity"
+        / "analysis"
+        / "2026-07-16-brenda-r0-reacting-atom-reprocess"
+        / "results"
+        / "accepted_chemistry_with_3d_audit.csv",
+    ),
 ]
 
 UNIPROT_COLUMN_CANDIDATES = (
@@ -73,6 +83,16 @@ def fetch_text(url: str) -> str:
     )
     with urlopen(request, timeout=120) as response:
         return response.read().decode("utf-8", errors="replace")
+
+
+def raise_csv_field_limit() -> None:
+    limit = sys.maxsize
+    while True:
+        try:
+            csv.field_size_limit(limit)
+            return
+        except OverflowError:
+            limit //= 10
 
 
 def clean_name(value: str) -> str:
@@ -161,7 +181,7 @@ def first_json_string(value: str) -> str:
 
 
 def id_list(value: str) -> list[str]:
-    if not value:
+    if value is None or value == "":
         return []
     items = json_list(value)
     if not items:
@@ -169,7 +189,7 @@ def id_list(value: str) -> list[str]:
     ids: list[str] = []
     seen: set[str] = set()
     for item in items:
-        text = str(item or "").strip()
+        text = "" if item is None else str(item).strip()
         if text.endswith(".0"):
             text = text[:-2]
         if not text or text.lower() in {"nan", "none", "null", "[]"} or text in seen:
@@ -195,7 +215,7 @@ def uniprot_ids_from_row(row: dict[str, str]) -> list[str]:
 
 
 def clean_id(value: str) -> str:
-    text = str(value or "")
+    text = "" if value is None else str(value)
     return text[:-2] if text.endswith(".0") else text
 
 
@@ -262,6 +282,14 @@ def load_full_reaction_map(paths: list[tuple[str, Path]]) -> dict[tuple[str, str
                         key = (dataset, row.get("source_pair_id", ""), reaction_id, enzyme_id)
                         put_reaction(reaction_map, key, row.get("mapped_reaction_smiles", ""), 25)
                         put_reaction(reaction_map, key, row.get("source_reaction_smiles", ""), 5)
+                elif source_name == "brenda_reacting_atom_audit":
+                    key = (
+                        "brenda",
+                        row.get("source_pair_id", ""),
+                        row.get("reaction", ""),
+                        row.get("enzyme", ""),
+                    )
+                    put_reaction(reaction_map, key, row.get("mapped_rxn", ""), 8)
     return {key: value for key, (_, value) in reaction_map.items()}
 
 
@@ -459,6 +487,8 @@ def build_dataset(csv_path: Path, full_names: dict[str, str], class_names: dict[
 
 
 def main() -> None:
+    raise_csv_field_limit()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", type=Path, default=SOURCE_CSV)
     parser.add_argument("--reference-examples", type=Path, default=REFERENCE_EXAMPLES_CSV)
