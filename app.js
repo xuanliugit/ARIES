@@ -462,6 +462,7 @@ function exampleCard(example, index) {
         <strong>Example ${index}</strong>
         <span class="badge">${escapeHtml(example.dataset || "source")}</span>
         <span class="badge">${escapeHtml(example.id)}</span>
+        ${example.selectivityIssue ? `<span class="badge warn">selectivity issue</span>` : ""}
       </div>
       <div class="example-protein">
         <span class="example-label">UniProt ID</span>
