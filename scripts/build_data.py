@@ -54,6 +54,17 @@ REACTION_SOURCE_CSVS = [
     ),
 ]
 
+UNIPROT_COLUMN_CANDIDATES = (
+    "source_uniprots",
+    "source_uniports",
+    "source_uniprot",
+    "source_uniport",
+    "uniprots",
+    "uniports",
+    "uniprot",
+    "uniport",
+)
+
 
 def fetch_text(url: str) -> str:
     request = Request(
@@ -150,7 +161,37 @@ def first_json_string(value: str) -> str:
 
 
 def id_list(value: str) -> list[str]:
-    return [str(item) for item in json_list(value) if str(item) != ""]
+    if not value:
+        return []
+    items = json_list(value)
+    if not items:
+        items = re.split(r"[,;|\s]+", str(value).strip())
+    ids: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        text = str(item or "").strip()
+        if text.endswith(".0"):
+            text = text[:-2]
+        if not text or text.lower() in {"nan", "none", "null", "[]"} or text in seen:
+            continue
+        ids.append(text)
+        seen.add(text)
+    return ids
+
+
+def first_matching_column(row: dict[str, str], candidates: tuple[str, ...]) -> str:
+    lowered = {key.lower(): key for key in row}
+    for candidate in candidates:
+        key = lowered.get(candidate.lower())
+        if key:
+            value = row.get(key, "")
+            if value:
+                return value
+    return ""
+
+
+def uniprot_ids_from_row(row: dict[str, str]) -> list[str]:
+    return id_list(first_matching_column(row, UNIPROT_COLUMN_CANDIDATES))
 
 
 def clean_id(value: str) -> str:
@@ -238,7 +279,7 @@ def load_reference_examples(path: Path, reaction_map: dict[tuple[str, str, str, 
             pair_ids = id_list(row.get("source_pair_ids", "")) or [row.get("source_pair_id", "")]
             reaction_ids = id_list(row.get("source_reaction_ids", ""))
             enzyme_ids = id_list(row.get("source_enzyme_ids", ""))
-            uniprots = id_list(row.get("source_uniprots", ""))
+            uniprots = uniprot_ids_from_row(row)
             dataset = row.get("source_dataset") or first_json_string(row.get("dataset_memberships", "")) or "source"
 
             full_reaction = ""
@@ -261,6 +302,7 @@ def load_reference_examples(path: Path, reaction_map: dict[tuple[str, str, str, 
             examples[example_id] = {
                 "id": example_id,
                 "proteinName": protein_label(dataset, enzyme_ids, uniprots),
+                "uniprotIds": uniprots,
                 "proteinSequence": row.get("enzyme_sequence", ""),
                 "dataset": dataset,
                 "sourcePairIds": pair_ids,
@@ -412,6 +454,9 @@ def build_dataset(csv_path: Path, full_names: dict[str, str], class_names: dict[
             "referenceExamplesCsv": str(REFERENCE_EXAMPLES_CSV),
             "referenceExampleCount": len(example_details),
             "templatesWithExamples": sum(1 for item in templates if item["examples"]),
+            "examplesWithUniprotCount": sum(
+                1 for item in templates for example in item["examples"] if example.get("uniprotIds")
+            ),
             "examplesWithFullReactionCount": sum(
                 1 for item in templates for example in item["examples"] if example.get("fullReactionSmiles")
             ),

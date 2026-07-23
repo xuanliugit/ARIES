@@ -462,6 +462,7 @@ function exampleCard(example, index) {
   const substrate = example.canonicalSubstrateSmiles || example.mappedSubstrateSmiles || "";
   const mappedSubstrate = example.mappedSubstrateSmiles || "";
   const hasDistinctMappedSubstrate = mappedSubstrate && mappedSubstrate !== substrate;
+  const uniprotIds = Array.isArray(example.uniprotIds) ? example.uniprotIds.filter(Boolean) : [];
   return `
     <article class="example-card">
       <div class="example-topline">
@@ -470,8 +471,8 @@ function exampleCard(example, index) {
         <span class="badge">${escapeHtml(example.id)}</span>
       </div>
       <div class="example-protein">
-        <span class="example-label">Protein name</span>
-        <span>${escapeHtml(example.proteinName || "Unknown protein")}</span>
+        <span class="example-label">UniProt ID</span>
+        <span class="uniprot-links">${uniprotIdMarkup(uniprotIds)}</span>
       </div>
       <div class="example-grid">
         <div class="sequence-block">
@@ -505,6 +506,19 @@ function exampleCard(example, index) {
       }
     </article>
   `;
+}
+
+function uniprotIdMarkup(ids) {
+  if (!ids.length) {
+    return `<span class="missing-value">Not available</span>`;
+  }
+  return ids
+    .map((id) => {
+      const text = String(id).trim();
+      const url = `https://www.uniprot.org/uniprotkb/${encodeURIComponent(text)}/entry`;
+      return `<a class="uniprot-link" href="${escapeAttribute(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>`;
+    })
+    .join("");
 }
 
 function compactValueBlock(label, value) {
