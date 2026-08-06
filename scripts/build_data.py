@@ -108,14 +108,14 @@ def json_list(value: str) -> list:
 
 def id_list(value: str) -> list[str]:
     values = json_list(value)
-    if not values and value:
+    if not values and value.strip().lower() not in {"", "[]", "null", "none", "nan"}:
         values = re.split(r"[,;|\s]+", value.strip())
     result: list[str] = []
     for item in values:
         text = str(item).strip()
         if text.endswith(".0"):
             text = text[:-2]
-        if text and text.lower() not in {"nan", "none", "null"} and text not in result:
+        if text and text.lower() not in {"[]", "nan", "none", "null"} and text not in result:
             result.append(text)
     return result
 
