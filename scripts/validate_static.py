@@ -16,17 +16,17 @@ def load_data() -> dict:
 
 def main() -> None:
     data = load_data()
-    assert data["metadata"]["sourceCsvRows"] == 18588
-    assert data["metadata"]["positiveExampleCount"] == 18588
-    assert data["metadata"]["sourceExampleCounts"] == {"brenda": 18009, "halogenase": 579}
-    assert data["metadata"]["uniqueReactionCount"] == 12432
-    assert data["metadata"]["uniqueEnzymeCount"] == 5593
-    assert data["metadata"]["uniqueProteinSequenceCount"] == 5573
-    assert data["metadata"]["uniqueEcCount"] == len(data["ecEntries"]) == 2343
-    assert data["metadata"]["uniqueTemplateCount"] == len(data["templates"]) == 6696
-    assert data["metadata"]["templatesWithExamples"] == 6696
-    assert data["metadata"]["examplesWithUniprotCount"] == 18429
-    assert data["metadata"]["examplesWithFullReactionCount"] == 18588
+    assert data["metadata"]["sourceCsvRows"] == 22920
+    assert data["metadata"]["positiveExampleCount"] == 22920
+    assert data["metadata"]["sourceExampleCounts"] == {"brenda": 22326, "halogenase": 594}
+    assert data["metadata"]["uniqueReactionCount"] == 15178
+    assert data["metadata"]["uniqueEnzymeCount"] == 6701
+    assert data["metadata"]["uniqueProteinSequenceCount"] == 6680
+    assert data["metadata"]["uniqueEcCount"] == len(data["ecEntries"]) == 2775
+    assert data["metadata"]["uniqueTemplateCount"] == len(data["templates"]) == 8042
+    assert data["metadata"]["templatesWithExamples"] == 8042
+    assert data["metadata"]["examplesWithUniprotCount"] == 22751
+    assert data["metadata"]["examplesWithFullReactionCount"] == 22920
     assert all(entry["name"] for entry in data["ecEntries"])
     assert all(entry["ec"] != "[]" for entry in data["ecEntries"])
     assert data["prefixes"]["1"]["name"] == "Oxidoreductases"
@@ -80,7 +80,7 @@ def main() -> None:
         if example.get("selectivityIssue")
     )
     assert template_selectivity_issue_count == example_selectivity_issue_count > 0
-    assert len(examples_by_id) == 18588
+    assert len(examples_by_id) == 22920
     brenda_example = examples_by_id["aries-brenda-0005a738cd26e819ab8b"]
     assert brenda_example["sourceReactionIds"] == ["15890"]
     assert brenda_example["sourceEnzymeIds"] == ["9106"]

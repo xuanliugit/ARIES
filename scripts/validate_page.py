@@ -32,7 +32,7 @@ def main() -> None:
 
         page.goto(URL, wait_until="domcontentloaded", timeout=30000)
         expect(page.locator("#datasetMeta")).to_contain_text(
-            "2,343 EC buckets",
+            "2,775 EC buckets",
             timeout=10000,
         )
         expect(page.locator("#rdkitStatus")).to_contain_text(

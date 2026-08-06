@@ -10,10 +10,10 @@ Full mapped reactions come from the matching `reaction_details.csv` in each
 dataset directory. These locations and the output contract are documented in
 `analysis/2026-07-29-aries-rxn-fg-brenda-halogenase-data/README.md`.
 
-Generated data contains 2,343 EC buckets and 6,696 deduplicated EC/template
-SMARTS entries from 18,588 accepted enzyme–reaction examples: 18,009 BRENDA
-and 579 halogenase. They cover 12,432 source reactions, 5,593 source enzyme
-records, and 5,573 unique protein sequences. Every example includes its updated
+Generated data contains 2,775 EC buckets and 8,042 deduplicated EC/template
+SMARTS entries from 22,920 accepted enzyme–reaction examples: 22,326 BRENDA
+and 594 halogenase. They cover 15,178 source reactions, 6,701 source enzyme
+records, and 6,680 unique protein sequences. Every example includes its updated
 EC number, enzyme sequence/identifiers, and full mapped reaction.
 
 ## Data Sources
