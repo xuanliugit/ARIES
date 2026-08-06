@@ -44,7 +44,7 @@ function init() {
     els[id] = document.getElementById(id);
   }
 
-  els.datasetMeta.textContent = `Supported by ARIES DB: ${DATA.metadata.uniqueEcCount.toLocaleString()} EC buckets, ${DATA.metadata.uniqueTemplateCount.toLocaleString()} templates, ${DATA.metadata.sourceCsvRows.toLocaleString()} source rows`;
+  els.datasetMeta.textContent = `Supported by ARIES DB: ${DATA.metadata.uniqueEcCount.toLocaleString()} EC buckets, ${DATA.metadata.uniqueTemplateCount.toLocaleString()} templates, ${DATA.metadata.positiveExampleCount.toLocaleString()} enzyme–reaction examples`;
 
   els.searchInput.addEventListener("input", () => {
     state.query = els.searchInput.value.trim();
@@ -265,7 +265,6 @@ function renderSearch(query) {
       ecByCode.get(template.ec)?.name || "",
       template.templateId,
       template.siteSmarts,
-      template.radius0Smarts,
     ]),
   );
 
@@ -360,7 +359,6 @@ function templateCard(template, index) {
   const datasetText = Object.entries(template.sourceDatasets)
     .map(([name, count]) => `${name}: ${count}`)
     .join(", ");
-  const showRadius = template.radius0Smarts !== template.siteSmarts;
   const examples = template.examples || [];
   const fullReactionCount = examples.filter((example) => example.fullReactionSmiles).length;
 
@@ -383,8 +381,7 @@ function templateCard(template, index) {
     </div>
     <div class="template-body">
       <div class="reaction-art" data-smarts="${escapeAttribute(template.siteSmarts)}">RDKit.js loading</div>
-      ${smartsBlock("Reaction SMARTS", template.siteSmarts)}
-      ${showRadius ? smartsBlock("Radius-0 SMARTS", template.radius0Smarts) : ""}
+      ${smartsBlock("ARIES FG reaction SMARTS", template.siteSmarts)}
       ${examplesSection(template)}
     </div>
   `;
@@ -480,10 +477,12 @@ function exampleCard(example, index) {
           <span>source pair: ${escapeHtml((example.sourcePairIds || []).join(", ") || "n/a")}</span>
           <span>reaction: ${escapeHtml((example.sourceReactionIds || []).join(", ") || "n/a")}</span>
           <span>enzyme: ${escapeHtml((example.sourceEnzymeIds || []).join(", ") || "n/a")}</span>
-          <span>legal sites: ${formatMaybe(example.legalSiteCount)}</span>
+          <span>potential sites: ${formatMaybe(example.potentialSiteCount)}</span>
+          <span>positive sites: ${formatMaybe(example.positiveSiteCount)}</span>
           <span>atoms: ${formatMaybe(example.numAtoms)}</span>
           <span>positive atoms: ${formatMaybe(example.positiveAtomCount)}</span>
-          <span>legal atoms: ${formatMaybe(example.legalAtomCount)}</span>
+          <span>potential atoms: ${formatMaybe(example.potentialAtomCount)}</span>
+          <span>observed reacting atoms: ${formatMaybe(example.observedGroundTruthAtomCount)}</span>
           <span>sequence length: ${formatMaybe((example.proteinSequence || "").length || null)}</span>
           <span>full reaction: ${reaction ? "available" : "not recovered"}</span>
         </div>
@@ -568,18 +567,24 @@ function renderVisibleDrawings() {
 
 function renderReactionSmarts(smarts, target, mode = "query") {
   target.textContent = "";
-  const parsed = parseReactionSmarts(smarts);
-  if (!parsed) {
-    target.innerHTML = `<div class="fallback-mol">${escapeHtml(smarts)}</div>`;
-    return;
-  }
+  const rules = mode === "query" ? smarts.split(/\s+\|\|\s+/) : [smarts];
+  for (const rule of rules) {
+    const parsed = parseReactionSmarts(rule);
+    if (!parsed) {
+      const fallback = document.createElement("div");
+      fallback.className = "fallback-mol";
+      fallback.textContent = rule;
+      target.appendChild(fallback);
+      continue;
+    }
 
-  const row = document.createElement("div");
-  row.className = "reaction-row";
-  addMoleculeSide(row, parsed.reactants, mode);
-  addOperator(row, "->");
-  addMoleculeSide(row, parsed.products, mode);
-  target.appendChild(row);
+    const row = document.createElement("div");
+    row.className = "reaction-row";
+    addMoleculeSide(row, parsed.reactants, mode);
+    addOperator(row, "->");
+    addMoleculeSide(row, parsed.products, mode);
+    target.appendChild(row);
+  }
 }
 
 function addMoleculeSide(row, parts, mode) {

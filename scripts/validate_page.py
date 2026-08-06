@@ -32,7 +32,7 @@ def main() -> None:
 
         page.goto(URL, wait_until="domcontentloaded", timeout=30000)
         expect(page.locator("#datasetMeta")).to_contain_text(
-            "2,464 EC buckets",
+            "2,578 EC buckets",
             timeout=10000,
         )
         expect(page.locator("#rdkitStatus")).to_contain_text(
@@ -64,7 +64,7 @@ def main() -> None:
         copied = page.evaluate("navigator.clipboard.readText()")
         assert copied == first_smarts, "clipboard SMARTS did not match first template"
 
-        page.locator("#searchInput").fill("[O&H1&+0&D1:1]>>")
+        page.locator("#searchInput").fill("[c;D2:1]>>[c;D3:1]-[Cl;D1:2]")
         expect(page.locator("#panelHead")).to_contain_text(
             "template matches",
             timeout=10000,

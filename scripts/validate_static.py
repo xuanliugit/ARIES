@@ -16,18 +16,23 @@ def load_data() -> dict:
 
 def main() -> None:
     data = load_data()
-    assert data["metadata"]["sourceCsvRows"] == 18171
-    assert data["metadata"]["uniqueEcCount"] == len(data["ecEntries"]) == 2464
-    assert data["metadata"]["uniqueTemplateCount"] == len(data["templates"]) == 6333
-    assert data["metadata"]["referenceExampleCount"] == 18171
-    assert data["metadata"]["templatesWithExamples"] == 6333
-    assert data["metadata"]["examplesWithUniprotCount"] >= 18000
-    assert data["metadata"]["examplesWithFullReactionCount"] >= 11000
+    assert data["metadata"]["sourceCsvRows"] == 21131
+    assert data["metadata"]["positiveExampleCount"] == 21131
+    assert data["metadata"]["sourceExampleCounts"] == {"brenda": 19891, "halogenase": 1240}
+    assert data["metadata"]["uniqueReactionCount"] == 13532
+    assert data["metadata"]["uniqueEnzymeCount"] == 6180
+    assert data["metadata"]["uniqueProteinSequenceCount"] == 6159
+    assert data["metadata"]["uniqueEcCount"] == len(data["ecEntries"]) == 2578
+    assert data["metadata"]["uniqueTemplateCount"] == len(data["templates"]) == 7313
+    assert data["metadata"]["templatesWithExamples"] == 7313
+    assert data["metadata"]["examplesWithUniprotCount"] == 21131
+    assert data["metadata"]["examplesWithFullReactionCount"] == 21131
     assert all(entry["name"] for entry in data["ecEntries"])
     assert data["prefixes"]["1"]["name"] == "Oxidoreductases"
     assert data["prefixes"]["1.1"]["name"].startswith("Acting on the CH-OH")
     assert data["prefixes"]["1.1.1"]["name"].startswith("With NAD")
-    assert any("[O&H1&+0&D1:1]>>" in item["siteSmarts"] for item in data["templates"])
+    assert any("[c;D2:1]>>[c;D3:1]-[Cl;D1:2]" == item["siteSmarts"] for item in data["templates"])
+    assert any(" || " in item["siteSmarts"] for item in data["templates"])
     assert any("alcohol dehydrogenase" == item["name"] for item in data["ecEntries"])
     assert all(item["examples"] for item in data["templates"])
     assert any(item["examples"][0].get("fullReactionSmiles") for item in data["templates"])
@@ -39,10 +44,20 @@ def main() -> None:
     assert all(
         key not in item
         for item in data["templates"]
-        for key in ["legalSiteCount", "numAtoms", "positiveAtomCount", "legalAtomCount"]
+        for key in ["potentialSiteCount", "numAtoms", "positiveAtomCount", "potentialAtomCount"]
     )
     assert all(
-        all(key in example for key in ["legalSiteCount", "numAtoms", "positiveAtomCount", "legalAtomCount"])
+        all(
+            key in example
+            for key in [
+                "potentialSiteCount",
+                "positiveSiteCount",
+                "numAtoms",
+                "positiveAtomCount",
+                "potentialAtomCount",
+                "observedGroundTruthAtomCount",
+            ]
+        )
         for item in data["templates"]
         for example in item["examples"]
     )
@@ -59,9 +74,17 @@ def main() -> None:
         if example.get("selectivityIssue")
     )
     assert template_selectivity_issue_count == example_selectivity_issue_count > 0
-    assert examples_by_id["clean-model1-f183eb4af5552ddc72fd"]["sourceEnzymeIds"] == ["0"]
-    assert examples_by_id["clean-model1-f183eb4af5552ddc72fd"]["fullReactionSmiles"]
-    assert examples_by_id["clean-model1-5ff925128296cd4c9bdf"]["fullReactionSmiles"]
+    assert len(examples_by_id) == 21131
+    brenda_example = examples_by_id["aries-brenda-19581e27de7ced00ff1c"]
+    assert brenda_example["sourceReactionIds"] == ["39253"]
+    assert brenda_example["sourceEnzymeIds"] == ["25201"]
+    assert brenda_example["uniprotIds"] == ["A0A3Q0KMZ9"]
+    assert brenda_example["fullReactionSmiles"]
+    halogenase_example = examples_by_id["aries-halogenase-4e07408562bedb8b60ce"]
+    assert halogenase_example["sourceReactionIds"] == ["288"]
+    assert halogenase_example["sourceEnzymeIds"] == ["201"]
+    assert halogenase_example["uniprotIds"] == ["A0A0Q0FAF2"]
+    assert halogenase_example["fullReactionSmiles"]
 
     for path in [
         "index.html",

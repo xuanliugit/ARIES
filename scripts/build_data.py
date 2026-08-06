@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the static EC reaction-template lookup dataset."""
+"""Build the static lookup dataset from the current ARIES FG exports."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import html
 import json
 import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -18,71 +18,29 @@ from urllib.request import Request, urlopen
 EXPASY_ENZYME_DAT_URL = "https://ftp.expasy.org/databases/enzyme/enzyme.dat"
 EXPASY_BYCLASS_URL = "https://enzyme.expasy.org/enzyme-byclass.html"
 
-SOURCE_CSV = (
-    Path(__file__).resolve().parents[2]
-    / "ezspecificity"
-    / "analysis"
-    / "2026-07-19-aries-db-build-methods"
-    / "results"
-    / "ec_number_reaction_template_rows.csv"
-)
-
-REFERENCE_EXAMPLES_CSV = (
-    Path(__file__).resolve().parents[2]
-    / "ezspecificity"
-    / "analysis"
-    / "2026-07-16-clean-brenda-hal-model1-split"
-    / "data"
-    / "all_model_ready_examples.csv"
-)
-
-REACTION_SOURCE_CSVS = [
+PROJECT_ROOT = Path(__file__).resolve().parents[2] / "ezspecificity"
+DEFAULT_SOURCES = (
     (
-        "brenda_pool",
-        Path(__file__).resolve().parents[2]
-        / "ezspecificity"
-        / "data"
-        / "brenda"
-        / "site_selectivity_candidate_pool.csv",
+        "brenda",
+        PROJECT_ROOT / "data" / "aries_brenda" / "examples.csv",
+        PROJECT_ROOT / "data" / "aries_brenda" / "reaction_details.csv",
     ),
     (
-        "mixed_aries",
-        Path(__file__).resolve().parents[2]
-        / "ezspecificity"
-        / "data"
-        / "mixed_brenda_halogenase_corrected_fold0_20260703"
-        / "aries_examples.csv",
+        "halogenase",
+        PROJECT_ROOT / "data" / "aries_halogenase" / "examples.csv",
+        PROJECT_ROOT / "data" / "aries_halogenase" / "reaction_details.csv",
     ),
-    (
-        "brenda_reacting_atom_audit",
-        Path(__file__).resolve().parents[2]
-        / "ezspecificity"
-        / "analysis"
-        / "2026-07-16-brenda-r0-reacting-atom-reprocess"
-        / "results"
-        / "accepted_chemistry_with_3d_audit.csv",
-    ),
-]
-
-UNIPROT_COLUMN_CANDIDATES = (
-    "source_uniprots",
-    "source_uniports",
-    "source_uniprot",
-    "source_uniport",
-    "uniprots",
-    "uniports",
-    "uniprot",
-    "uniport",
 )
 
 
 def fetch_text(url: str) -> str:
-    request = Request(
-        url,
-        headers={"User-Agent": "EC reaction template lookup data builder"},
-    )
+    request = Request(url, headers={"User-Agent": "ARIES EC lookup data builder"})
     with urlopen(request, timeout=120) as response:
         return response.read().decode("utf-8", errors="replace")
+
+
+def load_text(path: Path | None, url: str) -> str:
+    return path.read_text(encoding="utf-8", errors="replace") if path else fetch_text(url)
 
 
 def raise_csv_field_limit() -> None:
@@ -104,7 +62,6 @@ def parse_enzyme_dat(text: str) -> dict[str, str]:
     names: dict[str, str] = {}
     current_id: str | None = None
     de_lines: list[str] = []
-
     for line in text.splitlines():
         if line.startswith("ID   "):
             current_id = line[5:].strip()
@@ -116,50 +73,27 @@ def parse_enzyme_dat(text: str) -> dict[str, str]:
                 names[current_id] = clean_name(" ".join(de_lines))
             current_id = None
             de_lines = []
-
     return names
 
 
 def normalize_class_code(raw_code: str) -> str:
-    code = re.sub(r"\s+", "", raw_code.strip())
-    code = code.replace("-.-", "-.-").replace(".-", ".-")
-    parts = [part for part in code.split(".") if part != ""]
-    parts = [part for part in parts if part != "-"]
+    parts = [part for part in re.sub(r"\s+", "", raw_code.strip()).split(".") if part not in {"", "-"}]
     return ".".join(parts)
 
 
 def parse_byclass_names(text: str) -> dict[str, str]:
     names: dict[str, str] = {}
-    span_pattern = re.compile(
-        r"HREF\s*=\s*\"/EC/[^\"]+\">"
-        r"\s*<span[^>]*schema:name[^>]*>(?P<code>.*?)</span>"
+    pattern = re.compile(
+        r'HREF\s*=\s*"/EC/[^"]+">\s*<span[^>]*schema:name[^>]*>(?P<code>.*?)</span>'
         r"\s*</A>\s*<span[^>]*schema:description[^>]*>(?P<name>.*?)</span>",
         re.IGNORECASE | re.DOTALL,
     )
-    for match in span_pattern.finditer(text):
+    for match in pattern.finditer(text):
         code = normalize_class_code(html.unescape(re.sub(r"<[^>]+>", "", match.group("code"))))
         name = clean_name(html.unescape(re.sub(r"<[^>]+>", "", match.group("name"))))
         if code and name:
             names[code] = name
     return names
-
-
-def ec_sort_key(ec: str) -> tuple[int, tuple[int, ...], str]:
-    if not re.match(r"^\d+(?:\.\d+){0,3}$", ec):
-        return (1, (), ec)
-    return (0, tuple(int(part) for part in ec.split(".")), ec)
-
-
-def first_int(values: list[str]) -> int | None:
-    parsed: list[int] = []
-    for value in values:
-        if value == "":
-            continue
-        try:
-            parsed.append(int(value))
-        except ValueError:
-            continue
-    return parsed[0] if parsed else None
 
 
 def json_list(value: str) -> list:
@@ -172,189 +106,39 @@ def json_list(value: str) -> list:
     return parsed if isinstance(parsed, list) else [parsed]
 
 
-def first_json_string(value: str) -> str:
-    values = json_list(value)
-    for item in values:
-        if item is not None and str(item) != "":
-            return str(item)
-    return ""
-
-
 def id_list(value: str) -> list[str]:
-    if value is None or value == "":
-        return []
-    items = json_list(value)
-    if not items:
-        items = re.split(r"[,;|\s]+", str(value).strip())
-    ids: list[str] = []
-    seen: set[str] = set()
-    for item in items:
-        text = "" if item is None else str(item).strip()
+    values = json_list(value)
+    if not values and value:
+        values = re.split(r"[,;|\s]+", value.strip())
+    result: list[str] = []
+    for item in values:
+        text = str(item).strip()
         if text.endswith(".0"):
             text = text[:-2]
-        if not text or text.lower() in {"nan", "none", "null", "[]"} or text in seen:
-            continue
-        ids.append(text)
-        seen.add(text)
-    return ids
+        if text and text.lower() not in {"nan", "none", "null"} and text not in result:
+            result.append(text)
+    return result
 
 
-def first_matching_column(row: dict[str, str], candidates: tuple[str, ...]) -> str:
-    lowered = {key.lower(): key for key in row}
-    for candidate in candidates:
-        key = lowered.get(candidate.lower())
-        if key:
-            value = row.get(key, "")
-            if value:
-                return value
-    return ""
+def maybe_int(value: str) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
-def uniprot_ids_from_row(row: dict[str, str]) -> list[str]:
-    return id_list(first_matching_column(row, UNIPROT_COLUMN_CANDIDATES))
-
-
-def clean_id(value: str) -> str:
-    text = "" if value is None else str(value)
-    return text[:-2] if text.endswith(".0") else text
-
-
-def protein_label(dataset: str, enzyme_ids: list[str], uniprots: list[str]) -> str:
-    if uniprots:
-        return f"UniProt {uniprots[0]}"
-    enzyme_id = enzyme_ids[0] if enzyme_ids else ""
-    dataset_label = {"brenda": "BRENDA", "halogenase": "Halogenase"}.get(dataset.lower(), dataset.title())
-    if enzyme_id:
-        return f"{dataset_label} enzyme {enzyme_id}"
-    return f"{dataset_label} protein"
-
-
-def parse_mapped_reaction_json(value: str, reaction_id: str = "") -> str:
-    for item in json_list(value):
-        if not isinstance(item, dict):
-            continue
-        mapped = item.get("mapped_reaction_smiles") or item.get("reaction_smiles") or ""
-        if not mapped:
-            continue
-        if not reaction_id or str(item.get("positive_reaction", "")) == str(reaction_id):
-            return mapped
-    return ""
-
-
-def put_reaction(reaction_map: dict[tuple[str, str, str, str], tuple[int, str]], key: tuple[str, str, str, str], value: str, score: int) -> None:
-    if not value:
-        return
-    old = reaction_map.get(key)
-    if old is None or score > old[0]:
-        reaction_map[key] = (score, value)
-
-
-def load_full_reaction_map(paths: list[tuple[str, Path]]) -> dict[tuple[str, str, str, str], str]:
-    reaction_map: dict[tuple[str, str, str, str], tuple[int, str]] = {}
-    for source_name, path in paths:
-        if not path.exists():
-            continue
-        with path.open(newline="") as handle:
-            reader = csv.DictReader(handle)
-            for row in reader:
-                if source_name == "brenda_pool":
-                    key = (
-                        "brenda",
-                        row.get("source_pair_id", ""),
-                        row.get("reaction", ""),
-                        row.get("enzyme", ""),
-                    )
-                    observed = row.get("is_observed_product") == "1"
-                    positive = parse_mapped_reaction_json(row.get("positive_mapped_reaction_smiles", ""), row.get("reaction", ""))
-                    generated = parse_mapped_reaction_json(row.get("generation_mapped_reaction_smiles", ""), row.get("reaction", ""))
-                    put_reaction(reaction_map, key, positive, 30 if observed else 20)
-                    put_reaction(reaction_map, key, generated, 10)
-                elif source_name == "mixed_aries":
-                    dataset = row.get("dataset") or row.get("source_dataset") or ""
-                    enzyme_id = clean_id(row.get("enzyme_id", ""))
-                    reaction_ids = [
-                        clean_id(row.get("row_reaction_id", "")),
-                        clean_id(row.get("reaction_id", "")),
-                    ]
-                    for reaction_id in reaction_ids:
-                        if not reaction_id:
-                            continue
-                        key = (dataset, row.get("source_pair_id", ""), reaction_id, enzyme_id)
-                        put_reaction(reaction_map, key, row.get("mapped_reaction_smiles", ""), 25)
-                        put_reaction(reaction_map, key, row.get("source_reaction_smiles", ""), 5)
-                elif source_name == "brenda_reacting_atom_audit":
-                    key = (
-                        "brenda",
-                        row.get("source_pair_id", ""),
-                        row.get("reaction", ""),
-                        row.get("enzyme", ""),
-                    )
-                    put_reaction(reaction_map, key, row.get("mapped_rxn", ""), 8)
-    return {key: value for key, (_, value) in reaction_map.items()}
-
-
-def load_reference_examples(path: Path, reaction_map: dict[tuple[str, str, str, str], str]) -> dict[str, dict]:
-    examples: dict[str, dict] = {}
-    if not path.exists():
-        return examples
-
-    with path.open(newline="") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            example_id = row.get("example_id", "")
-            if not example_id:
-                continue
-            pair_ids = id_list(row.get("source_pair_ids", "")) or [row.get("source_pair_id", "")]
-            reaction_ids = id_list(row.get("source_reaction_ids", ""))
-            enzyme_ids = id_list(row.get("source_enzyme_ids", ""))
-            uniprots = uniprot_ids_from_row(row)
-            dataset = row.get("source_dataset") or first_json_string(row.get("dataset_memberships", "")) or "source"
-
-            full_reaction = ""
-            for pair_id in pair_ids:
-                for reaction_id in reaction_ids:
-                    for enzyme_id in enzyme_ids:
-                        full_reaction = reaction_map.get((dataset, pair_id, reaction_id, enzyme_id), "")
-                        if full_reaction:
-                            break
-                    if full_reaction:
-                        break
-                if full_reaction:
-                    break
-
-            canonical_substrate = row.get("canonical_substrate_smiles", "")
-            mapped_substrate = row.get("mapped_substrate_smiles", "")
-            if mapped_substrate == canonical_substrate:
-                mapped_substrate = ""
-
-            examples[example_id] = {
-                "id": example_id,
-                "proteinName": protein_label(dataset, enzyme_ids, uniprots),
-                "uniprotIds": uniprots,
-                "proteinSequence": row.get("enzyme_sequence", ""),
-                "dataset": dataset,
-                "sourcePairIds": pair_ids,
-                "sourceReactionIds": reaction_ids,
-                "sourceEnzymeIds": enzyme_ids,
-                "selectivityIssue": row.get("selectivity_issue") == "1",
-                "legalSiteCount": first_int([row.get("legal_site_count", "")]),
-                "numAtoms": first_int([row.get("num_atoms", "")]),
-                "positiveAtomCount": first_int([row.get("positive_atom_count", "")]),
-                "legalAtomCount": first_int([row.get("legal_atom_count", "")]),
-                "mappedSubstrateSmiles": mapped_substrate,
-                "canonicalSubstrateSmiles": canonical_substrate,
-                "fullReactionSmiles": full_reaction,
-            }
-    return examples
+def ec_sort_key(ec: str) -> tuple[int, tuple[int, ...], str]:
+    if not re.match(r"^\d+(?:\.\d+){0,3}$", ec):
+        return (1, (), ec)
+    return (0, tuple(int(part) for part in ec.split(".")), ec)
 
 
 def numeric_parent_key(ec: str) -> str:
     parts: list[str] = []
     for part in ec.strip(".").split("."):
-        if part.isdigit():
-            parts.append(part)
-        else:
+        if not part.isdigit():
             break
+        parts.append(part)
     return ".".join(parts)
 
 
@@ -373,24 +157,94 @@ def ec_name(ec: str, full_names: dict[str, str], class_names: dict[str, str]) ->
     return "Unlisted EC bucket", "dataset-bucket"
 
 
-def build_dataset(csv_path: Path, full_names: dict[str, str], class_names: dict[str, str], example_details: dict[str, dict]) -> dict:
-    rows = list(csv.DictReader(csv_path.open(newline="")))
-    grouped: dict[tuple[str, str, str, str], dict] = {}
+def load_reactions(dataset: str, path: Path) -> dict[tuple[str, str], str]:
+    reactions: dict[tuple[str, str], str] = {}
+    with path.open(newline="") as handle:
+        for row in csv.DictReader(handle):
+            if row.get("funnel_stage") != "11_aries_fg_chemical_funnel_accepted":
+                continue
+            reaction_id = row.get("reaction_index", "")
+            mapped_reaction = row.get("mapped_rxn", "")
+            if reaction_id and mapped_reaction:
+                reactions[(dataset, reaction_id)] = mapped_reaction
+    return reactions
 
+
+def load_examples(sources: tuple[tuple[str, Path, Path], ...]) -> tuple[list[dict], dict]:
+    reaction_map: dict[tuple[str, str], str] = {}
+    for dataset, _, reaction_path in sources:
+        reaction_map.update(load_reactions(dataset, reaction_path))
+
+    rows: list[dict] = []
+    source_example_counts: Counter[str] = Counter()
+    for dataset, examples_path, _ in sources:
+        with examples_path.open(newline="") as handle:
+            for raw in csv.DictReader(handle):
+                if raw.get("molecule_label") != "1" or raw.get("is_negative_pair") != "0":
+                    continue
+                source_example_counts[dataset] += 1
+                reaction_id = str(raw.get("source_reaction_id", ""))
+                ec_numbers = id_list(raw.get("source_ec_numbers", "")) or ["Other."]
+                uniprots = id_list(raw.get("source_uniprots", ""))
+                canonical_substrate = raw.get("canonical_substrate_smiles", "")
+                mapped_substrate = raw.get("mapped_substrate_smiles", "")
+                if mapped_substrate == canonical_substrate:
+                    mapped_substrate = ""
+                example = {
+                    "id": raw.get("example_id", ""),
+                    "uniprotIds": uniprots,
+                    "proteinSequence": raw.get("enzyme_sequence", ""),
+                    "dataset": dataset,
+                    "sourcePairIds": [str(raw.get("source_pair_id", ""))],
+                    "sourceReactionIds": [reaction_id],
+                    "sourceEnzymeIds": [str(raw.get("source_enzyme_id", ""))],
+                    "selectivityIssue": raw.get("selectivity_issue") == "1",
+                    "potentialSiteCount": maybe_int(raw.get("potential_site_count", "")),
+                    "positiveSiteCount": maybe_int(raw.get("positive_site_count", "")),
+                    "numAtoms": maybe_int(raw.get("num_atoms", "")),
+                    "positiveAtomCount": maybe_int(raw.get("positive_atom_count", "")),
+                    "potentialAtomCount": maybe_int(raw.get("potential_atom_count", "")),
+                    "observedGroundTruthAtomCount": maybe_int(raw.get("observed_ground_truth_atom_count", "")),
+                    "mappedSubstrateSmiles": mapped_substrate,
+                    "canonicalSubstrateSmiles": canonical_substrate,
+                    "fullReactionSmiles": reaction_map.get((dataset, reaction_id), ""),
+                }
+                for ec in ec_numbers:
+                    rows.append(
+                        {
+                            "ec": ec,
+                            "templateId": raw.get("template_id", ""),
+                            "siteSmarts": raw.get("aries_fg_template_smarts") or raw.get("site_template_smarts", ""),
+                            "dataset": dataset,
+                            "example": example,
+                        }
+                    )
+
+    metadata = {
+        "sourceExampleCounts": dict(sorted(source_example_counts.items())),
+        "positiveExampleCount": sum(source_example_counts.values()),
+        "uniqueReactionCount": len({(row["dataset"], row["example"]["sourceReactionIds"][0]) for row in rows}),
+        "uniqueEnzymeCount": len({(row["dataset"], row["example"]["sourceEnzymeIds"][0]) for row in rows}),
+        "uniqueProteinSequenceCount": len({row["example"]["proteinSequence"] for row in rows}),
+    }
+    return rows, metadata
+
+
+def build_dataset(
+    sources: tuple[tuple[str, Path, Path], ...],
+    full_names: dict[str, str],
+    class_names: dict[str, str],
+) -> dict:
+    rows, source_metadata = load_examples(sources)
+    grouped: dict[tuple[str, str, str], dict] = {}
     for row in rows:
-        key = (
-            row["ec_number"],
-            row["template_id"],
-            row["radius0_template_smarts"],
-            row["site_template_smarts"],
-        )
+        key = (row["ec"], row["templateId"], row["siteSmarts"])
         entry = grouped.setdefault(
             key,
             {
-                "ec": row["ec_number"],
-                "templateId": row["template_id"],
-                "radius0Smarts": row["radius0_template_smarts"],
-                "siteSmarts": row["site_template_smarts"],
+                "ec": row["ec"],
+                "templateId": row["templateId"],
+                "siteSmarts": row["siteSmarts"],
                 "sourceDatasets": Counter(),
                 "exampleIds": [],
                 "sourceReactionIds": [],
@@ -401,46 +255,40 @@ def build_dataset(csv_path: Path, full_names: dict[str, str], class_names: dict[
                 "rowCount": 0,
             },
         )
+        example = row["example"]
         entry["rowCount"] += 1
-        entry["sourceDatasets"][row["source_dataset"]] += 1
-        if row["selectivity_issue"] == "1":
-            entry["selectivityIssueCount"] += 1
-        for field, target in [
-            ("example_id", "exampleIds"),
-            ("source_reaction_id", "sourceReactionIds"),
-            ("source_enzyme_id", "sourceEnzymeIds"),
-            ("source_pair_id", "sourcePairIds"),
-        ]:
-            value = row[field]
+        entry["sourceDatasets"][row["dataset"]] += 1
+        entry["selectivityIssueCount"] += int(example["selectivityIssue"])
+        for value, target in (
+            (example["id"], "exampleIds"),
+            (example["sourceReactionIds"][0], "sourceReactionIds"),
+            (example["sourceEnzymeIds"][0], "sourceEnzymeIds"),
+            (example["sourcePairIds"][0], "sourcePairIds"),
+        ):
             if value and value not in entry[target] and len(entry[target]) < 8:
                 entry[target].append(value)
-        example = example_details.get(row["example_id"])
-        if example and all(existing["id"] != example["id"] for existing in entry["examples"]):
+        if all(old["id"] != example["id"] for old in entry["examples"]):
             entry["examples"].append(example)
 
-    templates = []
-    for entry in grouped.values():
+    templates = list(grouped.values())
+    for entry in templates:
         entry["sourceDatasets"] = dict(sorted(entry["sourceDatasets"].items()))
-        entry["examples"].sort(key=lambda example: (0 if example.get("fullReactionSmiles") else 1, example["id"]))
-        templates.append(entry)
-
+        entry["examples"].sort(key=lambda example: example["id"])
     templates.sort(key=lambda item: (ec_sort_key(item["ec"]), item["templateId"]))
 
-    ec_counts = Counter(row["ec_number"] for row in rows)
+    ec_counts = Counter(row["ec"] for row in rows)
     template_counts = Counter(item["ec"] for item in templates)
     ec_numbers = sorted(ec_counts, key=ec_sort_key)
-
-    ec_entries = []
     prefix_set: set[str] = set()
+    ec_entries = []
     for ec in ec_numbers:
-        parts = ec.split(".")
         numeric_parts: list[str] = []
-        for part in parts:
+        for part in ec.split("."):
             if not part.isdigit():
                 break
             numeric_parts.append(part)
-        for i in range(1, len(numeric_parts) + 1):
-            prefix_set.add(".".join(numeric_parts[:i]))
+        for index in range(1, len(numeric_parts) + 1):
+            prefix_set.add(".".join(numeric_parts[:index]))
         name, name_source = ec_name(ec, full_names, class_names)
         ec_entries.append(
             {
@@ -454,65 +302,51 @@ def build_dataset(csv_path: Path, full_names: dict[str, str], class_names: dict[
 
     prefixes = {}
     for prefix in sorted(prefix_set, key=ec_sort_key):
-        full_matches = [ec for ec in ec_numbers if ec.startswith(prefix + ".") or ec == prefix]
+        matches = [ec for ec in ec_numbers if ec == prefix or ec.startswith(prefix + ".")]
         prefixes[prefix] = {
             "name": class_names.get(prefix) or full_names.get(prefix) or "",
-            "rowCount": sum(ec_counts[ec] for ec in full_matches),
-            "templateCount": sum(template_counts[ec] for ec in full_matches),
-            "ecCount": len(full_matches),
+            "rowCount": sum(ec_counts[ec] for ec in matches),
+            "templateCount": sum(template_counts[ec] for ec in matches),
+            "ecCount": len(matches),
         }
 
-    return {
-        "metadata": {
-            "builtAt": datetime.now(timezone.utc).isoformat(),
-            "sourceCsv": str(csv_path),
-            "sourceCsvRows": len(rows),
-            "uniqueEcCount": len(ec_numbers),
-            "uniqueTemplateCount": len(templates),
-            "referenceExamplesCsv": str(REFERENCE_EXAMPLES_CSV),
-            "referenceExampleCount": len(example_details),
-            "templatesWithExamples": sum(1 for item in templates if item["examples"]),
-            "examplesWithUniprotCount": sum(
-                1 for item in templates for example in item["examples"] if example.get("uniprotIds")
-            ),
-            "examplesWithFullReactionCount": sum(
-                1 for item in templates for example in item["examples"] if example.get("fullReactionSmiles")
-            ),
-            "expasyEnzymeDatUrl": EXPASY_ENZYME_DAT_URL,
-            "expasyByClassUrl": EXPASY_BYCLASS_URL,
-        },
-        "ecEntries": ec_entries,
-        "prefixes": prefixes,
-        "templates": templates,
+    metadata = {
+        "builtAt": datetime.now(timezone.utc).isoformat(),
+        "sourceExamplesCsvs": [str(examples_path) for _, examples_path, _ in sources],
+        "reactionDetailsCsvs": [str(reaction_path) for _, _, reaction_path in sources],
+        "sourceCsvRows": len(rows),
+        "uniqueEcCount": len(ec_numbers),
+        "uniqueTemplateCount": len(templates),
+        **source_metadata,
+        "templatesWithExamples": sum(bool(item["examples"]) for item in templates),
+        "examplesWithUniprotCount": sum(
+            bool(example["uniprotIds"]) for item in templates for example in item["examples"]
+        ),
+        "examplesWithFullReactionCount": sum(
+            bool(example["fullReactionSmiles"]) for item in templates for example in item["examples"]
+        ),
+        "expasyEnzymeDatUrl": EXPASY_ENZYME_DAT_URL,
+        "expasyByClassUrl": EXPASY_BYCLASS_URL,
     }
+    return {"metadata": metadata, "ecEntries": ec_entries, "prefixes": prefixes, "templates": templates}
 
 
 def main() -> None:
     raise_csv_field_limit()
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", type=Path, default=SOURCE_CSV)
-    parser.add_argument("--reference-examples", type=Path, default=REFERENCE_EXAMPLES_CSV)
+    parser.add_argument("--enzyme-dat", type=Path, help="Local ENZYME enzyme.dat; downloaded when omitted")
+    parser.add_argument("--byclass-html", type=Path, help="Local ExPASy EC class page; downloaded when omitted")
     parser.add_argument("--output", type=Path, default=Path("data/ec_templates.js"))
     args = parser.parse_args()
 
-    enzyme_dat = fetch_text(EXPASY_ENZYME_DAT_URL)
-    byclass_html = fetch_text(EXPASY_BYCLASS_URL)
-    reaction_map = load_full_reaction_map(REACTION_SOURCE_CSVS)
-    example_details = load_reference_examples(args.reference_examples, reaction_map)
     dataset = build_dataset(
-        args.csv,
-        full_names=parse_enzyme_dat(enzyme_dat),
-        class_names=parse_byclass_names(byclass_html),
-        example_details=example_details,
+        DEFAULT_SOURCES,
+        full_names=parse_enzyme_dat(load_text(args.enzyme_dat, EXPASY_ENZYME_DAT_URL)),
+        class_names=parse_byclass_names(load_text(args.byclass_html, EXPASY_BYCLASS_URL)),
     )
-
     args.output.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(dataset, ensure_ascii=False, separators=(",", ":"))
-    args.output.write_text(
-        "window.EC_TEMPLATE_DATA = " + payload + ";\n",
-        encoding="utf-8",
-    )
+    args.output.write_text("window.EC_TEMPLATE_DATA = " + payload + ";\n", encoding="utf-8")
     print(json.dumps(dataset["metadata"], indent=2))
 
 
