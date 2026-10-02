@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import html
 import json
 import re
@@ -17,6 +18,7 @@ from urllib.request import Request, urlopen
 
 EXPASY_ENZYME_DAT_URL = "https://ftp.expasy.org/databases/enzyme/enzyme.dat"
 EXPASY_BYCLASS_URL = "https://enzyme.expasy.org/enzyme-byclass.html"
+STANDARD_EC_PATTERN = r"\d+\.(?:\d+|-)\.(?:\d+|-)\.(?:\d+|-)"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2] / "ezspecificity"
 DEFAULT_SOURCES = (
@@ -236,6 +238,8 @@ def build_dataset(
     class_names: dict[str, str],
 ) -> dict:
     rows, source_metadata = load_examples(sources)
+    standard_rows = [row for row in rows if re.fullmatch(STANDARD_EC_PATTERN, row["ec"])]
+    examples_by_id = {row["example"]["id"]: row["example"] for row in rows}
     grouped: dict[tuple[str, str, str], dict] = {}
     for row in rows:
         key = (row["ec"], row["templateId"], row["siteSmarts"])
@@ -314,16 +318,31 @@ def build_dataset(
         "builtAt": datetime.now(timezone.utc).isoformat(),
         "sourceExamplesCsvs": [str(examples_path) for _, examples_path, _ in sources],
         "reactionDetailsCsvs": [str(reaction_path) for _, _, reaction_path in sources],
-        "sourceCsvRows": len(rows),
+        "sourceCsvRows": source_metadata["positiveExampleCount"],
+        "ecExpandedRowCount": len(rows),
         "uniqueEcCount": len(ec_numbers),
-        "uniqueTemplateCount": len(templates),
+        "uniqueTemplateCount": len({row["templateId"] for row in rows}),
+        "lookupEntryCount": len(templates),
+        "ecAnnotationCount": len({row["ec"] for row in standard_rows}),
+        "ecTemplateAssociationCount": len({(row["ec"], row["templateId"]) for row in standard_rows}),
+        "examplesWithEcCount": len({row["example"]["id"] for row in standard_rows}),
+        "templatesWithEcCount": len({row["templateId"] for row in standard_rows}),
+        "standardEcPattern": STANDARD_EC_PATTERN,
+        "sourceExamplesSha256": {
+            dataset: hashlib.sha256(examples_path.read_bytes()).hexdigest()
+            for dataset, examples_path, _ in sources
+        },
+        "reactionDetailsSha256": {
+            dataset: hashlib.sha256(reaction_path.read_bytes()).hexdigest()
+            for dataset, _, reaction_path in sources
+        },
         **source_metadata,
         "templatesWithExamples": sum(bool(item["examples"]) for item in templates),
         "examplesWithUniprotCount": sum(
-            bool(example["uniprotIds"]) for item in templates for example in item["examples"]
+            bool(example["uniprotIds"]) for example in examples_by_id.values()
         ),
         "examplesWithFullReactionCount": sum(
-            bool(example["fullReactionSmiles"]) for item in templates for example in item["examples"]
+            bool(example["fullReactionSmiles"]) for example in examples_by_id.values()
         ),
         "expasyEnzymeDatUrl": EXPASY_ENZYME_DAT_URL,
         "expasyByClassUrl": EXPASY_BYCLASS_URL,

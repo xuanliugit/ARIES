@@ -168,11 +168,20 @@ h3 {
   margin-top: 10px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
-  padding: 0 10px;
+  padding: 4px 10px;
   background: rgba(255, 255, 255, 0.11);
   color: #f1fbf8;
   font-size: 13px;
   font-weight: 650;
+  line-height: 1.5;
+}
+
+.ec-coverage {
+  margin-top: 8px;
+  color: #d6eee8;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .rdkit-status {
@@ -210,9 +219,9 @@ h3 {
 
 .sidebar {
   position: sticky;
-  top: 104px;
+  top: calc(var(--header-height, 140px) + 20px);
   align-self: start;
-  max-height: calc(100vh - 124px);
+  max-height: calc(100vh - var(--header-height, 140px) - 40px);
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 10px;

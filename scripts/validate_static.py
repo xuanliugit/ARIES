@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 
@@ -23,7 +24,12 @@ def main() -> None:
     assert data["metadata"]["uniqueEnzymeCount"] == 6701
     assert data["metadata"]["uniqueProteinSequenceCount"] == 6680
     assert data["metadata"]["uniqueEcCount"] == len(data["ecEntries"]) == 2775
-    assert data["metadata"]["uniqueTemplateCount"] == len(data["templates"]) == 8042
+    assert data["metadata"]["uniqueTemplateCount"] == 4409
+    assert data["metadata"]["lookupEntryCount"] == len(data["templates"]) == 8042
+    assert data["metadata"]["ecAnnotationCount"] == 2690
+    assert data["metadata"]["ecTemplateAssociationCount"] == 7819
+    assert data["metadata"]["examplesWithEcCount"] == 22039
+    assert data["metadata"]["templatesWithEcCount"] == 4338
     assert data["metadata"]["templatesWithExamples"] == 8042
     assert data["metadata"]["examplesWithUniprotCount"] == 22751
     assert data["metadata"]["examplesWithFullReactionCount"] == 22920
@@ -81,6 +87,15 @@ def main() -> None:
     )
     assert template_selectivity_issue_count == example_selectivity_issue_count > 0
     assert len(examples_by_id) == 22920
+    standard_entries = [
+        item for item in data["templates"]
+        if re.fullmatch(data["metadata"]["standardEcPattern"], item["ec"])
+    ]
+    assert len({item["templateId"] for item in data["templates"]}) == 4409
+    assert len({item["ec"] for item in standard_entries}) == 2690
+    assert len({(item["ec"], item["templateId"]) for item in standard_entries}) == 7819
+    assert len({item["templateId"] for item in standard_entries}) == 4338
+    assert len({example["id"] for item in standard_entries for example in item["examples"]}) == 22039
     brenda_example = examples_by_id["aries-brenda-0005a738cd26e819ab8b"]
     assert brenda_example["sourceReactionIds"] == ["15890"]
     assert brenda_example["sourceEnzymeIds"] == ["9106"]
@@ -106,7 +121,8 @@ def main() -> None:
     print(
         "static ok:",
         f"{len(data['ecEntries'])} EC buckets,",
-        f"{len(data['templates'])} templates",
+        f"{data['metadata']['uniqueTemplateCount']} distinct templates,",
+        f"{len(data['templates'])} lookup entries",
     )
 
 

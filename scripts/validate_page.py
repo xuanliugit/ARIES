@@ -32,8 +32,12 @@ def main() -> None:
 
         page.goto(URL, wait_until="domcontentloaded", timeout=30000)
         expect(page.locator("#datasetMeta")).to_contain_text(
-            "2,775 EC buckets",
+            "22,920 enzyme–reaction examples, 4,409 distinct templates",
             timeout=10000,
+        )
+        expect(page.locator("#ecCoverage")).to_have_text(
+            "22,039 examples with standard-format EC annotations: 2,690 EC annotations, "
+            "7,819 EC-template associations, covering 4,338 templates",
         )
         expect(page.locator("#rdkitStatus")).to_contain_text(
             "RDKit.js",

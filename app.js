@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", init);
 function init() {
   for (const id of [
     "datasetMeta",
+    "ecCoverage",
     "rdkitStatus",
     "searchInput",
     "clearSearch",
@@ -44,7 +45,16 @@ function init() {
     els[id] = document.getElementById(id);
   }
 
-  els.datasetMeta.textContent = `Supported by ARIES DB: ${DATA.metadata.uniqueEcCount.toLocaleString()} EC buckets, ${DATA.metadata.uniqueTemplateCount.toLocaleString()} templates, ${DATA.metadata.positiveExampleCount.toLocaleString()} enzyme–reaction examples`;
+  const meta = DATA.metadata;
+  els.datasetMeta.textContent = `Supported by ARIES DB: ${meta.positiveExampleCount.toLocaleString()} enzyme–reaction examples, ${meta.uniqueTemplateCount.toLocaleString()} distinct templates`;
+  els.ecCoverage.textContent = `${meta.examplesWithEcCount.toLocaleString()} examples with standard-format EC annotations: ${meta.ecAnnotationCount.toLocaleString()} EC annotations, ${meta.ecTemplateAssociationCount.toLocaleString()} EC-template associations, covering ${meta.templatesWithEcCount.toLocaleString()} templates`;
+
+  const topbar = document.querySelector(".topbar");
+  const updateHeaderHeight = () => {
+    document.documentElement.style.setProperty("--header-height", `${topbar.getBoundingClientRect().height}px`);
+  };
+  new ResizeObserver(updateHeaderHeight).observe(topbar);
+  updateHeaderHeight();
 
   els.searchInput.addEventListener("input", () => {
     state.query = els.searchInput.value.trim();
