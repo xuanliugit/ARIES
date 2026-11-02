@@ -9,7 +9,7 @@ from playwright.sync_api import expect, sync_playwright
 
 
 URL = "http://127.0.0.1:4173/"
-SCREENSHOT = Path("/tmp/lookup-page-validation.png")
+SCREENSHOT = Path('/home/n-z/xliu254/ezspecificity/analysis/2026-11-02-brenda-only-aries-db/lookup/lookup-page-validation.png')
 
 
 def main() -> None:
@@ -32,12 +32,12 @@ def main() -> None:
 
         page.goto(URL, wait_until="domcontentloaded", timeout=30000)
         expect(page.locator("#datasetMeta")).to_contain_text(
-            "22,920 enzyme–reaction examples, 4,409 distinct templates",
+            "22,326 enzyme–reaction examples, 4,377 distinct templates",
             timeout=10000,
         )
         expect(page.locator("#ecCoverage")).to_have_text(
-            "22,039 examples with standard-format EC annotations: 2,690 EC annotations, "
-            "7,819 EC-template associations, covering 4,338 templates",
+            "21,879 examples with standard-format EC annotations: 2,681 EC annotations, "
+            "7,793 EC-template associations, covering 4,327 templates",
         )
         expect(page.locator("#rdkitStatus")).to_contain_text(
             "RDKit.js",

@@ -17,22 +17,22 @@ def load_data() -> dict:
 
 def main() -> None:
     data = load_data()
-    assert data["metadata"]["sourceCsvRows"] == 22920
-    assert data["metadata"]["positiveExampleCount"] == 22920
-    assert data["metadata"]["sourceExampleCounts"] == {"brenda": 22326, "halogenase": 594}
-    assert data["metadata"]["uniqueReactionCount"] == 15178
-    assert data["metadata"]["uniqueEnzymeCount"] == 6701
-    assert data["metadata"]["uniqueProteinSequenceCount"] == 6680
-    assert data["metadata"]["uniqueEcCount"] == len(data["ecEntries"]) == 2775
-    assert data["metadata"]["uniqueTemplateCount"] == 4409
-    assert data["metadata"]["lookupEntryCount"] == len(data["templates"]) == 8042
-    assert data["metadata"]["ecAnnotationCount"] == 2690
-    assert data["metadata"]["ecTemplateAssociationCount"] == 7819
-    assert data["metadata"]["examplesWithEcCount"] == 22039
-    assert data["metadata"]["templatesWithEcCount"] == 4338
-    assert data["metadata"]["templatesWithExamples"] == 8042
-    assert data["metadata"]["examplesWithUniprotCount"] == 22751
-    assert data["metadata"]["examplesWithFullReactionCount"] == 22920
+    assert data["metadata"]["sourceCsvRows"] == 22326
+    assert data["metadata"]["positiveExampleCount"] == 22326
+    assert data["metadata"]["sourceExampleCounts"] == {"brenda": 22326}
+    assert data["metadata"]["uniqueReactionCount"] == 14891
+    assert data["metadata"]["uniqueEnzymeCount"] == 6398
+    assert data["metadata"]["uniqueProteinSequenceCount"] == 6392
+    assert data["metadata"]["uniqueEcCount"] == len(data["ecEntries"]) == 2765
+    assert data["metadata"]["uniqueTemplateCount"] == 4377
+    assert data["metadata"]["lookupEntryCount"] == len(data["templates"]) == 7979
+    assert data["metadata"]["ecAnnotationCount"] == 2681
+    assert data["metadata"]["ecTemplateAssociationCount"] == 7793
+    assert data["metadata"]["examplesWithEcCount"] == 21879
+    assert data["metadata"]["templatesWithEcCount"] == 4327
+    assert data["metadata"]["templatesWithExamples"] == 7979
+    assert data["metadata"]["examplesWithUniprotCount"] == 22326
+    assert data["metadata"]["examplesWithFullReactionCount"] == 22326
     assert all(entry["name"] for entry in data["ecEntries"])
     assert all(entry["ec"] != "[]" for entry in data["ecEntries"])
     assert data["prefixes"]["1"]["name"] == "Oxidoreductases"
@@ -86,26 +86,25 @@ def main() -> None:
         if example.get("selectivityIssue")
     )
     assert template_selectivity_issue_count == example_selectivity_issue_count > 0
-    assert len(examples_by_id) == 22920
+    assert len(examples_by_id) == 22326
     standard_entries = [
         item for item in data["templates"]
         if re.fullmatch(data["metadata"]["standardEcPattern"], item["ec"])
     ]
-    assert len({item["templateId"] for item in data["templates"]}) == 4409
-    assert len({item["ec"] for item in standard_entries}) == 2690
-    assert len({(item["ec"], item["templateId"]) for item in standard_entries}) == 7819
-    assert len({item["templateId"] for item in standard_entries}) == 4338
-    assert len({example["id"] for item in standard_entries for example in item["examples"]}) == 22039
+    assert len({item["templateId"] for item in data["templates"]}) == 4377
+    assert len({item["ec"] for item in standard_entries}) == 2681
+    assert len({(item["ec"], item["templateId"]) for item in standard_entries}) == 7793
+    assert len({item["templateId"] for item in standard_entries}) == 4327
+    assert len({example["id"] for item in standard_entries for example in item["examples"]}) == 21879
     brenda_example = examples_by_id["aries-brenda-0005a738cd26e819ab8b"]
     assert brenda_example["sourceReactionIds"] == ["15890"]
     assert brenda_example["sourceEnzymeIds"] == ["9106"]
     assert brenda_example["uniprotIds"] == ["B3VA58"]
     assert brenda_example["fullReactionSmiles"]
-    halogenase_example = examples_by_id["aries-halogenase-0038263cc90dfa55d621"]
-    assert halogenase_example["sourceReactionIds"] == ["911"]
-    assert halogenase_example["sourceEnzymeIds"] == ["238"]
-    assert halogenase_example["uniprotIds"] == []
-    assert halogenase_example["fullReactionSmiles"]
+    assert all(example["dataset"] == "brenda" for example in examples_by_id.values())
+    assert all(example_id.startswith("aries-brenda-") for example_id in examples_by_id)
+    assert data["metadata"]["datasetScope"] == "BRENDA only"
+    assert data["metadata"]["releaseId"] == "aries-db-2026-10-31-grover-fixed4-v2"
 
     for path in [
         "index.html",

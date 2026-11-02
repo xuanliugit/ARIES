@@ -20,18 +20,9 @@ EXPASY_ENZYME_DAT_URL = "https://ftp.expasy.org/databases/enzyme/enzyme.dat"
 EXPASY_BYCLASS_URL = "https://enzyme.expasy.org/enzyme-byclass.html"
 STANDARD_EC_PATTERN = r"\d+\.(?:\d+|-)\.(?:\d+|-)\.(?:\d+|-)"
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2] / "ezspecificity"
+PROJECT_ROOT = Path('/home/n-z/xliu254/ezspecificity')
 DEFAULT_SOURCES = (
-    (
-        "brenda",
-        PROJECT_ROOT / "data" / "aries_brenda" / "examples.csv",
-        PROJECT_ROOT / "data" / "aries_brenda" / "reaction_details.csv",
-    ),
-    (
-        "halogenase",
-        PROJECT_ROOT / "data" / "aries_halogenase" / "examples.csv",
-        PROJECT_ROOT / "data" / "aries_halogenase" / "reaction_details.csv",
-    ),
+    ("brenda", PROJECT_ROOT / "data/BRENDA/examples.csv", PROJECT_ROOT / "data/BRENDA/reaction_details.csv"),
 )
 
 
@@ -355,14 +346,21 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--enzyme-dat", type=Path, help="Local ENZYME enzyme.dat; downloaded when omitted")
     parser.add_argument("--byclass-html", type=Path, help="Local ExPASy EC class page; downloaded when omitted")
+    parser.add_argument("--project-root", type=Path, default=PROJECT_ROOT, help="ARIES repository containing canonical data/BRENDA")
     parser.add_argument("--output", type=Path, default=Path("data/ec_templates.js"))
     args = parser.parse_args()
 
     dataset = build_dataset(
-        DEFAULT_SOURCES,
+        (("brenda", args.project_root / "data/BRENDA/examples.csv", args.project_root / "data/BRENDA/reaction_details.csv"),),
         full_names=parse_enzyme_dat(load_text(args.enzyme_dat, EXPASY_ENZYME_DAT_URL)),
         class_names=parse_byclass_names(load_text(args.byclass_html, EXPASY_BYCLASS_URL)),
     )
+    manifest = json.loads((args.project_root / "data/BRENDA/dataset_manifest.json").read_text())
+    assert manifest["status"] == "validated", "BRENDA release must be validated"
+    assert dataset["metadata"]["sourceExamplesSha256"]["brenda"] == manifest["examples_sha256"], "BRENDA examples hash differs from canonical release"
+    dataset["metadata"]["datasetScope"] = "BRENDA only"
+    dataset["metadata"]["releaseId"] = manifest["release_id"]
+    dataset["metadata"]["datasetManifestSha256"] = hashlib.sha256((args.project_root / "data/BRENDA/dataset_manifest.json").read_bytes()).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(dataset, ensure_ascii=False, separators=(",", ":"))
     args.output.write_text("window.EC_TEMPLATE_DATA = " + payload + ";\n", encoding="utf-8")

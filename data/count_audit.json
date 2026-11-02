@@ -1,46 +1,49 @@
 {
-  "verified_at": "2026-10-02T23:24:45.230651+00:00",
-  "standard_ec_pattern": "\\d+\\.(?:\\d+|-)\\.(?:\\d+|-)\\.(?:\\d+|-)",
-  "current": {
-    "examples": 22920,
-    "examples_with_parseable_ec": 22039,
-    "ec_annotations": 2690,
-    "ec_template_associations": 7819,
-    "templates_with_ec": 4338,
-    "all_templates": 4409,
-    "source_ec_buckets": 2775,
-    "lookup_entries": 8042,
-    "nonstandard_buckets": 85,
-    "nonstandard_associations": 223,
-    "examples_without_standard_ec": 881,
-    "b_suffixed_examples": 447,
-    "unclassified_examples": 434
-  },
-  "per_dataset": {
-    "brenda": {
-      "examples": 22326,
-      "examples_with_standard_ec": 21879,
-      "examples_without_standard_ec": 447
+  "status": "validated",
+  "scope": "BRENDA only",
+  "metadata": {
+    "builtAt": "2026-11-02T17:12:55.078783+00:00",
+    "sourceExamplesCsvs": [
+      "/home/n-z/xliu254/ezspecificity/data/BRENDA/examples.csv"
+    ],
+    "reactionDetailsCsvs": [
+      "/home/n-z/xliu254/ezspecificity/data/BRENDA/reaction_details.csv"
+    ],
+    "sourceCsvRows": 22326,
+    "ecExpandedRowCount": 22326,
+    "uniqueEcCount": 2765,
+    "uniqueTemplateCount": 4377,
+    "lookupEntryCount": 7979,
+    "ecAnnotationCount": 2681,
+    "ecTemplateAssociationCount": 7793,
+    "examplesWithEcCount": 21879,
+    "templatesWithEcCount": 4327,
+    "standardEcPattern": "\\d+\\.(?:\\d+|-)\\.(?:\\d+|-)\\.(?:\\d+|-)",
+    "sourceExamplesSha256": {
+      "brenda": "6f41e9dfe7663e2eaf5c5c567028d46b7ef0f55ef6f8633b0963003342b13410"
     },
-    "halogenase": {
-      "examples": 594,
-      "examples_with_standard_ec": 160,
-      "examples_without_standard_ec": 434
-    }
-  },
-  "inputs": [
-    {
-      "path": "/home/n-z/xliu254/ezspecificity/data/aries_brenda/examples.csv",
-      "sha256": "6f41e9dfe7663e2eaf5c5c567028d46b7ef0f55ef6f8633b0963003342b13410"
+    "reactionDetailsSha256": {
+      "brenda": "f6753cf46d3e7b6af0ede4d0d0e052a37d1c0192bbf55096f980a204a40453f3"
     },
-    {
-      "path": "/home/n-z/xliu254/ezspecificity/data/aries_halogenase/examples.csv",
-      "sha256": "f3476934b7d13a821653baca992b396cfb60b729826ec6aae436d4c0556307b3"
-    }
-  ],
-  "manuscript_audit": "/home/n-z/xliu254/ezspecificity/analysis/2026-09-14-manuscript-results-revision/ec_association_check.json",
-  "manuscript_counts_match": true,
-  "manuscript_input_hashes_match": true,
-  "template_ids_have_one_smarts_each": true,
-  "interpretation": "The lookup includes provisional B-suffixed and unclassified source buckets; lookup entries are EC/template associations, not distinct templates."
+    "sourceExampleCounts": {
+      "brenda": 22326
+    },
+    "positiveExampleCount": 22326,
+    "uniqueReactionCount": 14891,
+    "uniqueEnzymeCount": 6398,
+    "uniqueProteinSequenceCount": 6392,
+    "templatesWithExamples": 7979,
+    "examplesWithUniprotCount": 22326,
+    "examplesWithFullReactionCount": 22326,
+    "expasyEnzymeDatUrl": "https://ftp.expasy.org/databases/enzyme/enzyme.dat",
+    "expasyByClassUrl": "https://enzyme.expasy.org/enzyme-byclass.html",
+    "datasetScope": "BRENDA only",
+    "releaseId": "aries-db-2026-10-31-grover-fixed4-v2",
+    "datasetManifestSha256": "41a878f63f7e4d3ded3166901b3f19dfd4b339f9690ee167c6de9fbef4db60fc"
+  },
+  "all_exported_ids_equal_canonical_brenda": true,
+  "all_exported_sequences_substrates_templates_and_issue_labels_equal_canonical_brenda": true,
+  "fig2_counts_and_source_hashes_match": true,
+  "issue_examples": 7584,
+  "export_sha256": "5ec7d583ff35653dc40851117c186f8e34dad166eba6e23675eaf14b692c9705"
 }

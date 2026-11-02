@@ -46,7 +46,7 @@ function init() {
   }
 
   const meta = DATA.metadata;
-  els.datasetMeta.textContent = `Supported by ARIES DB: ${meta.positiveExampleCount.toLocaleString()} enzyme–reaction examples, ${meta.uniqueTemplateCount.toLocaleString()} distinct templates`;
+  els.datasetMeta.textContent = `ARIES-DB · BRENDA only: ${meta.positiveExampleCount.toLocaleString()} enzyme–reaction examples, ${meta.uniqueTemplateCount.toLocaleString()} distinct templates`;
   els.ecCoverage.textContent = `${meta.examplesWithEcCount.toLocaleString()} examples with standard-format EC annotations: ${meta.ecAnnotationCount.toLocaleString()} EC annotations, ${meta.ecTemplateAssociationCount.toLocaleString()} EC-template associations, covering ${meta.templatesWithEcCount.toLocaleString()} templates`;
 
   const topbar = document.querySelector(".topbar");
