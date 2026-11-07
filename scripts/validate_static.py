@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -17,6 +18,10 @@ def load_data() -> dict:
 
 def main() -> None:
     data = load_data()
+    revision = hashlib.sha256(Path("data/ec_templates.js").read_bytes()).hexdigest()[:16]
+    html_text = Path("index.html").read_text(encoding="utf-8")
+    assert f'src="data/ec_templates.js?v={revision}"' in html_text
+    assert f'src="app.js?v={revision}"' in html_text
     assert data["metadata"]["sourceCsvRows"] == 22326
     assert data["metadata"]["positiveExampleCount"] == 22326
     assert data["metadata"]["sourceExampleCounts"] == {"brenda": 22326}

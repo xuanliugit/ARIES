@@ -1,6 +1,6 @@
 "use strict";
 
-const DATA = window.EC_TEMPLATE_DATA;
+const DATA = window.EC_TEMPLATE_DATA || { metadata: {}, ecEntries: [], prefixes: {}, templates: [] };
 const TEMPLATE_LIMIT_STEP = 60;
 const PREFIX_BROWSE_DEPTH = 3;
 
@@ -11,10 +11,10 @@ const state = {
   templateLimit: TEMPLATE_LIMIT_STEP,
 };
 
-const ecEntries = DATA.ecEntries;
+const ecEntries = Array.isArray(DATA.ecEntries) ? DATA.ecEntries : [];
 const ecByCode = new Map(ecEntries.map((entry) => [entry.ec, entry]));
 const templatesByEc = new Map();
-for (const template of DATA.templates) {
+for (const template of Array.isArray(DATA.templates) ? DATA.templates : []) {
   if (!templatesByEc.has(template.ec)) {
     templatesByEc.set(template.ec, []);
   }
@@ -24,6 +24,38 @@ for (const template of DATA.templates) {
 const els = {};
 
 document.addEventListener("DOMContentLoaded", init);
+
+function isBrendaOnlyDataset(data) {
+  const meta = data && data.metadata;
+  const counts = meta && meta.sourceExampleCounts;
+  if (
+    !meta || meta.datasetScope !== "BRENDA only" || !counts ||
+    Object.keys(counts).length !== 1 ||
+    !Number.isInteger(counts.brenda) || counts.brenda <= 0 ||
+    counts.brenda !== meta.positiveExampleCount ||
+    counts.brenda !== meta.sourceCsvRows ||
+    !Array.isArray(data.templates) || !Array.isArray(data.ecEntries)
+  ) {
+    return false;
+  }
+  const exampleIds = new Set();
+  const templateIds = new Set();
+  for (const template of data.templates) {
+    if (!template || typeof template.templateId !== "string" ||
+        !Array.isArray(template.examples) || template.examples.length === 0) {
+      return false;
+    }
+    templateIds.add(template.templateId);
+    for (const example of template.examples) {
+      if (!example || example.dataset !== "brenda" ||
+          typeof example.id !== "string" || !example.id.startsWith("aries-brenda-")) {
+        return false;
+      }
+      exampleIds.add(example.id);
+    }
+  }
+  return exampleIds.size === counts.brenda && templateIds.size === meta.uniqueTemplateCount;
+}
 
 function init() {
   for (const id of [
@@ -43,6 +75,18 @@ function init() {
     "backToTop",
   ]) {
     els[id] = document.getElementById(id);
+  }
+
+  if (!isBrendaOnlyDataset(DATA)) {
+    els.datasetMeta.textContent = "BRENDA-only lookup data could not be loaded.";
+    els.datasetMeta.setAttribute("role", "alert");
+    els.ecCoverage.textContent = "Refresh this page to load the current database.";
+    els.rdkitStatus.textContent = "Data unavailable";
+    for (const id of ["searchInput", "clearSearch", "resetBrowse", "loadMore"]) {
+      els[id].disabled = true;
+    }
+    els.loadMore.hidden = true;
+    return;
   }
 
   const meta = DATA.metadata;

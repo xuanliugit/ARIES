@@ -341,6 +341,22 @@ def build_dataset(
     return {"metadata": metadata, "ecEntries": ec_entries, "prefixes": prefixes, "templates": templates}
 
 
+def refresh_asset_versions(output: Path) -> str:
+    """Keep the public HTML tied to the exact rebuilt BRENDA data bundle."""
+    revision = hashlib.sha256(output.read_bytes()).hexdigest()[:16]
+    index = output.resolve().parent.parent / "index.html"
+    if output.name != "ec_templates.js" or not index.exists():
+        return revision
+    text = index.read_text(encoding="utf-8")
+    for asset in ("data/ec_templates.js", "app.js"):
+        pattern = r'(src="' + re.escape(asset) + r')(?:\?[^"\s]*)?(")'
+        text, count = re.subn(pattern, lambda match: match.group(1) + "?v=" + revision + match.group(2), text)
+        if count != 1:
+            raise ValueError(f"Expected one script reference for {asset} in {index}")
+    index.write_text(text, encoding="utf-8")
+    return revision
+
+
 def main() -> None:
     raise_csv_field_limit()
     parser = argparse.ArgumentParser()
@@ -364,6 +380,7 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(dataset, ensure_ascii=False, separators=(",", ":"))
     args.output.write_text("window.EC_TEMPLATE_DATA = " + payload + ";\n", encoding="utf-8")
+    refresh_asset_versions(args.output)
     print(json.dumps(dataset["metadata"], indent=2))
 
 

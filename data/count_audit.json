@@ -2,7 +2,7 @@
   "status": "validated",
   "scope": "BRENDA only",
   "metadata": {
-    "builtAt": "2026-11-02T17:12:55.078783+00:00",
+    "builtAt": "2026-11-07T09:04:05.187957+00:00",
     "sourceExamplesCsvs": [
       "/home/n-z/xliu254/ezspecificity/data/BRENDA/examples.csv"
     ],
@@ -45,5 +45,15 @@
   "all_exported_sequences_substrates_templates_and_issue_labels_equal_canonical_brenda": true,
   "fig2_counts_and_source_hashes_match": true,
   "issue_examples": 7584,
-  "export_sha256": "5ec7d583ff35653dc40851117c186f8e34dad166eba6e23675eaf14b692c9705"
+  "export_sha256": "ab7c6b9fbc776caae3458ecd5121fa2699cf2961e9a23be1e69dc49447f5b0b7",
+  "audit_version": 2,
+  "auditedAt": "2026-11-07T09:05:03.262281+00:00",
+  "canonical_examples_checked": 22326,
+  "ec_template_associations_checked": 7979,
+  "ec_navigation_prefixes_checked": 2962,
+  "exported_non_BRENDA_examples": 0,
+  "exported_Halogenase_collection_examples": 0,
+  "all_full_mapped_reactions_and_atom_site_counts_match_canonical_brenda": true,
+  "all_ec_entries_and_navigation_prefix_counts_match_canonical_brenda": true,
+  "source_records_preserved_without_keyword_based_chemistry_filtering": true
 }

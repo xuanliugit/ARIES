@@ -1,9 +1,14 @@
 # ARIES Lookup: BRENDA-only ARIES-DB
 
-The lookup serves only the canonical BRENDA collection, verified November 2, 2026.
+The lookup serves only the canonical BRENDA collection, verified November 7, 2026.
 The default builder reads `data/BRENDA/examples.csv` and the matching
 `reaction_details.csv` from the ARIES repository. Halogenase and the other family
 collections remain available for specialist evaluation but are outside ARIES-DB.
+
+The page checks BRENDA source labels, example IDs and record counts before
+showing lookup results. A mixed or incomplete bundle is rejected with a refresh
+message. Rebuilding the export updates the data and application asset versions
+in `index.html` so a refreshed page loads the matching BRENDA bundle.
 
 The database contains **22,326 examples, 14,891 source reactions, 9,630 canonical
 substrates, 6,392 exact enzyme sequences and 4,377 distinct template IDs**. Of these,
